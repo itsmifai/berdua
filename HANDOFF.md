@@ -37,13 +37,13 @@ Target platform: mobile-first (dipakai sebagai PWA di HP), tapi harus tetap rapi
 ```
 berdua/
 ├── index.html              # app shell (5 tab dalam 1 halaman, SPA manual)
-├── login.html              # halaman login/register + pairing kode pasangan
+├── login.html              # halaman login saja (akun sudah di-seed, lihat §3)
 ├── css/
 │   └── style.css           # semua design token & komponen (salin dari prototype-v2.html)
 ├── js/
 │   ├── app.js              # router tab, init, state global
 │   ├── supabaseClient.js   # init client (env: VITE_/global const SUPABASE_URL & ANON_KEY)
-│   ├── auth.js             # login, register, pairing, session guard
+│   ├── auth.js             # login, session guard, lupa password
 │   ├── today.js            # halaman Hari Ini (flame, misi hari ini, agenda terdekat)
 │   ├── agenda.js           # kalender + CRUD agenda
 │   ├── misi.js             # CRUD misi, selesaikan misi, leaderboard mingguan
@@ -63,16 +63,18 @@ Konfigurasi Supabase (URL + anon key) ditaruh di `js/supabaseClient.js` sebagai 
 
 ---
 
-## 3. Model Pengguna & Pairing
+## 3. Model Pengguna & Akun (Keputusan final: TANPA register/pairing)
 
-- Satu "ruang" = satu **couple**, berisi tepat **2 profil**.
-- Alur pairing:
-  1. Pengguna A register → otomatis dibuatkan `couples` row + `invite_code` unik 6 karakter (huruf besar, tanpa karakter ambigu).
-  2. A melihat kode di layar "Tunggu pasanganmu".
-  3. Pengguna B register → memasukkan kode → digabungkan ke couple yang sama. Status couple jadi `paired`.
-  4. Setelah paired, keduanya masuk ke app utama. Tidak bisa ada anggota ke-3.
-- Setiap profil punya: `display_name`, `initial` (1 huruf untuk avatar fallback), `color_role` (`me` = terracotta untuk yang lebih dulu membuat couple? TIDAK — biarkan user memilih warna saat onboarding: terracotta atau sage; default: pendaftar pertama terracotta, kedua sage).
-- Akun pasangan ditampilkan di header sebagai dua avatar maskot dengan centang "aktif hari ini" (sudah menyelesaikan ≥1 misi hari itu).
+Pengguna app ini diketahui dari awal dan tetap hanya 2 orang, maka alur register + kode pairing **dihapus**. Pendekatan yang dipakai:
+
+- **Kedua akun dibuat sekaligus di awal (seed)** oleh agent saat Fase 0:
+  - Buat 2 user di Supabase Authentication (dashboard → Users → Add user, atau panggil `supabase.auth.signUp()` sekali lewat skrip development).
+  - Insert 1 row `couples` (status `paired`; minta `anniversary_date` ke pemilik produk, boleh null) dan 2 row `profiles` yang menunjuk couple itu — `color_role` `terra` untuk akun utama (Miftah), `sage` untuk akun pasangan.
+  - Email + password kedua akun dicatat dan diberikan ke pemilik produk. Setelah login pertama, user boleh ganti password sendiri dari menu Profil (opsional).
+- **Layar terkait auth jadi minimal**: hanya Login (email + password). Tidak ada form register, tidak ada layar kode invite, tidak ada RPC `join_couple`.
+- Reset password memakai recovery email bawaan Supabase ("Lupa password?" di halaman Login) — SMTP default cukup untuk 2 akun.
+- Kolom `couples.invite_code` dibiarkan nullable di schema (warisan rencana; mungkin dipakai bila app dibuka untuk orang lain nanti), tapi TIDAK ada UI-nya di MVP.
+- Satu "ruang" = satu **couple** berisi tepat 2 profil; pasangan ditampilkan di header sebagai dua avatar maskot dengan centang "aktif hari ini" (sudah menyelesaikan ≥1 misi hari itu).
 
 ---
 
@@ -84,8 +86,8 @@ Buat file `supabase/schema.sql` berisi seluruh tabel berikut + RLS. Kolom `uuid 
 -- 1. couples: ruang bersama
 create table couples (
   id uuid primary key default gen_random_uuid(),
-  invite_code text unique not null,          -- 6 karakter A-Z
-  status text not null default 'waiting',    -- waiting | paired
+  invite_code text unique,                   -- nullable; tidak dipakai di MVP (lihat §3)
+  status text not null default 'paired',     -- waiting | paired (seed langsung 'paired')
   anniversary_date date,                     -- opsional, diisi user
   created_at timestamptz default now()
 );
@@ -206,8 +208,8 @@ create policy "couple delete" on missions for delete
 ```
 
 Aturan tambahan:
-- `profiles`: user hanya bisa update profil sendiri; select untuk satu couple; insert saat register (via trigger `handle_new_user` atau dari client dengan check `id = auth.uid()`).
-- `couples`: select/insert hanya bila user terkait (invite_code lookup boleh dibaca saat pairing — buat policy khusus: select jika `id = my_couple_id()` ATAU untuk flow pairing gunakan RPC `join_couple(code)` sebagai `security definer` function yang memvalidasi dan menggabungkan user, sehingga `invite_code` tidak bisa di-enumerasi sembarangan).
+- `profiles`: user hanya bisa update profil sendiri; select untuk satu couple; INSERT hanya via seed/admin (service role) — client tidak perlu bisa insert (lihat §3).
+- `couples`: select hanya bila `id = my_couple_id()`. Row dibuat via seed/admin, jadi policy insert/update cukup untuk service role. RPC `join_couple` TIDAK diperlukan di MVP (lihat §3).
 - `mission_completions`: insert hanya `user_id = auth.uid()`; **delete tidak diizinkan** (mencegah curang menghapus riwayat) — koreksi kesalahan via update `is_active` di missions, bukan hapus completion. Untuk UX "batal centang", izinkan delete completion HANYA pada hari yang sama (`completed_on = today`) dan kurangi `xp_balance` di trigger yang sama.
 - **XP balance dijaga trigger DB** (bukan update dari client) agar tidak bisa dimanipulasi:
   - after insert on `mission_completions` → `xp_balance += xp_awarded` (profil user)
@@ -222,11 +224,22 @@ Aktifkan Supabase Realtime (`alter publication supabase_realtime add table ...`)
 
 ## 5. Spesifikasi Fitur per Layar
 
-### 5.1 Login / Pairing (`login.html`)
-- Tab Login & Register (email + password + display name).
-- Setelah register: jika belum punya couple → layar "Masukkan kode pasangan ATAU buat ruang baru". Yang membuat ruang baru melihat layar tunggu dengan kode invite besar + tombol salin + tombol "Install app" hint.
-- Setelah paired → redirect `index.html`. Session guard: belum login → lempar ke `login.html`.
-- Desain: tetap pakai palet & font yang sama; ada maskot blob besar di tengah; copy singkat & hangat (contoh: "Masuk ke ruang kalian berdua").
+### 5.1 Splash (Loading) & Login
+
+**Splash — fitur pemanis, durasi ±2 detik, tampilkan di cold start:**
+- Layar penuh warna `#FAF5EE`; logo **Ber*dua*** besar (Fraunces) di tengah dengan fade/slide-in halus + dot api kecil berkedip di bawahnya.
+- **DUA maskot blob berjalan** (terracotta di depan, sage mengikuti di belakang — visual "berdua"!) melintasi layar dari kiri ke kanan, loop. **Implementasi persisnya sudah tersedia di `prototype-v2.html` blok `<!-- ===== SPLASH ===== -->` (CSS `.splash*`, `.walk-blob`, `.bw-*` + JS `endSplash`) — salin apa adanya, jangan bikin ulang dari nol.**
+- Teknik walk cycle (sudah diterapkan di prototype, pertahankan): tiap maskot adalah inline `<svg>` (bukan `<use>` — agar CSS grup bisa diakses) berisi 3 group: `<g class="bw-body">` (badan + wajah, animasi `bwBob` naik-turun + miring 2.5deg, 0.5s loop), `<g class="bw-arm-a">` & `<g class="bw-arm-b">` (lengan, animasi `bwSwing` rotasi ±20deg dengan `reverse` agar bergantian; `transform-box: fill-box` + `transform-origin` di titik pangkal lengan).
+- Sequence nyata: splash tampil → auto-hide ±2.6 detik (fade 0.45s lalu `display:none`) ATAU langsung hide saat diketuk (label "ketuk untuk melewatkan" di bawah). Di app asli: setelah splash selesai → cek session → sudah login: render app; belum: `login.html`. Splash tidak diulang saat pindah tab (tab switch bukan reload).
+- Setelah deploy sebagai PWA, splash juga jadi `screens` entry di `manifest.json` (buat gambar statis 1× versinya).
+
+**Login (`login.html`) — sangat sederhana:**
+- Layout: cream bg, kartu putih membulat di tengah (max-width 380px), logo "Berdua" kecil + maskot `#blob` diam di pojok kartu, copy hangat singkat (contoh: "Masuk ke ruang kalian berdua").
+- Field: Email, Password, tombol "Masuk" (gaya 3D), link "Lupa password?" (recovery email bawaan Supabase).
+- Kredensial salah → toast "Email atau password salah" + animasi shake halus pada kartu.
+- TIDAK ada form register / input kode pairing — akun sudah di-seed (§3).
+- Session guard: akses `index.html` tanpa session valid → lempar ke `login.html`.
+- Tombol kecil "Install app" (pakai event `beforeinstallprompt`) tersedia di halaman ini saat tersedia.
 
 ### 5.2 Header (persisten di index.html)
 - Kiri: logo teks **Ber*dua*** (Fraunces, "dua" warna terracotta) — persis prototype.
@@ -294,7 +307,7 @@ Ambil **persis** dari `prototype-v2.html`:
 - `manifest.json`: name "Berdua", short_name "Berdua", description, start_url `/index.html`, display `standalone`, background `#FAF5EE`, theme `#E2725B`, icons 192 & 512 (+ maskable). Ikon app: flamechar di atas latar cream (generate SVG → boleh ekspor PNG).
 - `sw.js`: cache app shell (index.html, login.html, css, js, img) dengan versioning (`CACHE_NAME = 'berdua-v1'`, invalidate saat deploy); network-first untuk navigasi dengan fallback cache; jangan cache request Supabase.
 - Registrasi SW hanya di production/https.
-- Tambahkan tombol/petunjuk "Install" sederhana di layar tunggu pairing (event `beforeinstallprompt`).
+- Tombol/petunjuk "Install" sederhana tersedia di halaman Login saat event `beforeinstallprompt` tersedia (lihat §5.1).
 
 ---
 
@@ -320,8 +333,8 @@ Zona waktu canonical seluruh app: **Asia/Jakarta** (`completed_on` default sudah
 
 Kerjakan berurutan; setiap fase harus bisa dijalankan & diuji sebelum lanjut:
 
-- **Fase 0 — Setup**: struktur folder, salin design system dari prototype ke `css/style.css`, supabaseClient, `schema.sql` lengkap (tabel + RLS + trigger + RPC `join_couple` & `redeem_coupon` + function `couple_streak`). Instruksikan di README cara membuat project Supabase & menjalankan schema.sql.
-- **Fase 1 — Auth & Pairing**: register/login, pembuatan couple + invite code, layar tunggu, join via kode, session guard, profil (display name, color_role).
+- **Fase 0 — Setup**: struktur folder, salin design system dari prototype ke `css/style.css`, supabaseClient, `schema.sql` lengkap (tabel + RLS + trigger + RPC `redeem_coupon` + function `couple_streak`), **skrip/langkah seed** sesuai §3 (2 akun auth + 1 couple + 2 profiles). Instruksikan di README cara membuat project Supabase, menjalankan schema.sql, dan menjalankan seed.
+- **Fase 1 — Splash & Auth**: layar splash dengan maskot `#blob-walk` berjalan (§5.1), halaman login (kredensial dari seed), session guard, "Lupa password?".
 - **Fase 2 — Agenda**: kalender dinamis multi-bulan, CRUD agenda, dot kategori, list per tanggal, empty state.
 - **Fase 3 — Misi & XP**: CRUD misi, centang/batal dengan trigger XP, toast+confetti+hop, pill XP header live.
 - **Fase 4 — Streak & Leaderboard**: function `couple_streak`, kartu api bersama 3 kondisi, duel VS mingguan dengan mahkota dinamis.

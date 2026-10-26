@@ -8,13 +8,13 @@ create extension if not exists "pgcrypto";
 -- 1. TABEL: couples (Ruang Bersama)
 create table if not exists couples (
   id uuid primary key default gen_random_uuid(),
-  invite_code text unique not null,          -- 6 karakter A-Z (tanpa karakter ambigu)
-  status text not null default 'waiting' check (status in ('waiting', 'paired')),
+  invite_code text unique,                   -- nullable; tidak dipakai di MVP (lihat §3)
+  status text not null default 'paired' check (status in ('waiting', 'paired')), -- seed langsung 'paired'
   anniversary_date date,                     -- opsional, diisi user
   created_at timestamptz default now()
 );
 
--- 2. TABEL: profiles (1 per user auth)
+-- 2. TABEL: profiles (1 per user auth, tepat 2 profil per couple)
 create table if not exists profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   couple_id uuid references couples(id) on delete set null,
@@ -104,21 +104,18 @@ alter table agenda_events enable row level security;
 alter table coupons enable row level security;
 alter table coupon_redemptions enable row level security;
 
--- Policies: couples
-create policy "User can view own couple" on couples for select
+-- Policies: couples (hanya bisa dibaca oleh anggota couple)
+create policy "Couple read couples" on couples for select
   using (id = my_couple_id());
 
-create policy "User can update own couple" on couples for update
+create policy "Couple update own couple" on couples for update
   using (id = my_couple_id());
 
--- Policies: profiles
-create policy "User can view profiles in same couple or self" on profiles for select
+-- Policies: profiles (baca profil dalam satu couple, update hanya profil sendiri)
+create policy "Couple read profiles" on profiles for select
   using (id = auth.uid() or (couple_id is not null and couple_id = my_couple_id()));
 
-create policy "User can insert own profile" on profiles for insert
-  with check (id = auth.uid());
-
-create policy "User can update own profile non-xp fields" on profiles for update
+create policy "User update own profile non-xp fields" on profiles for update
   using (id = auth.uid())
   with check (id = auth.uid());
 
@@ -218,142 +215,6 @@ drop trigger if exists on_mission_uncompleted on mission_completions;
 create trigger on_mission_uncompleted
 after delete on mission_completions
 for each row execute function handle_mission_completion_delete();
-
--- ==============================================================================
--- RPC: PAIRING & COUPLE MANAGEMENT
--- ==============================================================================
-
--- Fungsi helper membuat kode invite acak 6 huruf kapital (tanpa karakter ambigu)
-create or replace function generate_invite_code()
-returns text language plpgsql as $$
-declare
-  chars text := 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; -- Tanpa O, 0, I, 1
-  result text := '';
-  i int;
-begin
-  for i in 1..6 loop
-    result := result || substr(chars, floor(random() * length(chars) + 1)::int, 1);
-  end loop;
-  return result;
-end;
-$$;
-
--- RPC Buat Ruang Couple Baru
-create or replace function create_couple(
-  p_display_name text,
-  p_color_role text default 'terra'
-)
-returns json language plpgsql security definer as $$
-declare
-  v_user_id uuid := auth.uid();
-  v_code text;
-  v_couple couples%rowtype;
-  v_attempts int := 0;
-begin
-  if v_user_id is null then
-    raise exception 'Tidak terautentikasi';
-  end if;
-
-  -- Buat kode unik
-  loop
-    v_code := generate_invite_code();
-    v_attempts := v_attempts + 1;
-    exit when not exists (select 1 from couples where invite_code = v_code);
-    if v_attempts > 20 then
-      raise exception 'Gagal menghasilkan kode unik';
-    end if;
-  end loop;
-
-  insert into couples (invite_code, status)
-  values (v_code, 'waiting')
-  returning * into v_couple;
-
-  -- Hubungkan profil pengguna pembuat
-  insert into profiles (id, couple_id, display_name, color_role, xp_balance)
-  values (v_user_id, v_couple.id, p_display_name, coalesce(p_color_role, 'terra'), 0)
-  on conflict (id) do update
-  set couple_id = v_couple.id,
-      display_name = excluded.display_name,
-      color_role = coalesce(p_color_role, 'terra');
-
-  return json_build_object(
-    'couple_id', v_couple.id,
-    'invite_code', v_couple.invite_code,
-    'status', v_couple.status
-  );
-end;
-$$;
-
--- RPC Gabung Couple Menggunakan Kode Invite
-create or replace function join_couple(
-  p_invite_code text,
-  p_display_name text,
-  p_color_role text default 'sage'
-)
-returns json language plpgsql security definer as $$
-declare
-  v_user_id uuid := auth.uid();
-  v_couple couples%rowtype;
-  v_existing_count int;
-  v_partner_role text;
-  v_final_role text;
-begin
-  if v_user_id is null then
-    raise exception 'Tidak terautentikasi';
-  end if;
-
-  -- Cari couple berdasarkan kode
-  select * into v_couple
-  from couples
-  where invite_code = upper(trim(p_invite_code));
-
-  if not found then
-    raise exception 'Kode undangan tidak valid';
-  end if;
-
-  if v_couple.status = 'paired' then
-    raise exception 'Ruang couple ini sudah penuh';
-  end if;
-
-  -- Cek jumlah member saat ini
-  select count(*), max(color_role)
-  into v_existing_count, v_partner_role
-  from profiles
-  where couple_id = v_couple.id;
-
-  if v_existing_count >= 2 then
-    raise exception 'Ruang couple ini sudah memiliki 2 pasangan';
-  end if;
-
-  -- Tentukan role agar tidak bentrok
-  if v_partner_role = 'terra' then
-    v_final_role := 'sage';
-  elsif v_partner_role = 'sage' then
-    v_final_role := 'terra';
-  else
-    v_final_role := coalesce(p_color_role, 'sage');
-  end if;
-
-  -- Tautkan profil pengguna kedua
-  insert into profiles (id, couple_id, display_name, color_role, xp_balance)
-  values (v_user_id, v_couple.id, p_display_name, v_final_role, 0)
-  on conflict (id) do update
-  set couple_id = v_couple.id,
-      display_name = excluded.display_name,
-      color_role = v_final_role;
-
-  -- Update status couple menjadi paired
-  update couples
-  set status = 'paired'
-  where id = v_couple.id;
-
-  return json_build_object(
-    'couple_id', v_couple.id,
-    'status', 'paired',
-    'color_role', v_final_role
-  );
-end;
-$$;
 
 -- ==============================================================================
 -- RPC: PENUKARAN KUPON (REDEEM)
@@ -516,7 +377,6 @@ $$;
 -- REALTIME SUBSCRIPTIONS
 -- ==============================================================================
 
--- Aktifkan Realtime untuk tabel-tabel utama
 alter publication supabase_realtime add table mission_completions;
 alter publication supabase_realtime add table agenda_events;
 alter publication supabase_realtime add table missions;

@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Masuk — Berdua</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    body {
+      background: var(--bg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
+    .login-container {
+      width: 100%;
+      max-width: 380px;
+      margin: 0 auto;
+    }
+    .login-card {
+      background: var(--card);
+      border-radius: 28px;
+      box-shadow: var(--shadow-lg);
+      padding: 30px 24px;
+      border: 1px solid var(--line);
+      position: relative;
+      overflow: hidden;
+    }
+    .login-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      margin-bottom: 24px;
+    }
+    .login-brand {
+      font-family: "Fraunces", serif;
+      font-size: 28px;
+      font-weight: 600;
+      line-height: 1.1;
+    }
+    .login-brand em {
+      font-style: normal;
+      color: var(--terra);
+    }
+    .login-desc {
+      font-size: 13.5px;
+      font-weight: 600;
+      color: var(--ink-soft);
+      margin-top: 6px;
+    }
+    .login-mascot {
+      width: 52px;
+      height: 52px;
+    }
+    .login-mascot svg {
+      width: 100%;
+      height: 100%;
+    }
+    .login-options {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 14px;
+      margin-bottom: 20px;
+    }
+    .forgot-link {
+      font-size: 12.5px;
+      font-weight: 700;
+      color: var(--terra);
+      text-decoration: none;
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-family: inherit;
+      padding: 0;
+    }
+    .install-pwa-btn {
+      display: none;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      margin-top: 20px;
+      background: none;
+      border: 1.5px dashed var(--line);
+      border-radius: 14px;
+      padding: 10px;
+      width: 100%;
+      font-family: inherit;
+      font-size: 12.5px;
+      font-weight: 700;
+      color: var(--ink-soft);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .install-pwa-btn:hover {
+      border-color: var(--terra);
+      color: var(--terra);
+    }
+    .install-pwa-btn svg {
+      width: 16px;
+      height: 16px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- SVG Symbol Maskot -->
+  <svg style="display:none" xmlns="http://www.w3.org/2000/svg">
+    <symbol id="blob" viewBox="0 0 100 100">
+      <ellipse cx="50" cy="60" rx="36" ry="34" fill="currentColor"/>
+      <ellipse cx="13" cy="63" rx="8" ry="5.5" fill="currentColor" transform="rotate(-18 13 63)"/>
+      <ellipse cx="87" cy="63" rx="8" ry="5.5" fill="currentColor" transform="rotate(18 87 63)"/>
+      <path d="M50 27c0-7 7-12 14-11-1 8-7 13-14 11z" fill="#7D9B76"/>
+      <ellipse cx="37" cy="54" rx="9" ry="10.5" fill="#fff"/>
+      <ellipse cx="63" cy="54" rx="9" ry="10.5" fill="#fff"/>
+      <circle cx="39" cy="56" r="4.2" fill="#2E2A26"/>
+      <circle cx="65" cy="56" r="4.2" fill="#2E2A26"/>
+      <circle cx="40.5" cy="54.3" r="1.4" fill="#fff"/>
+      <circle cx="66.5" cy="54.3" r="1.4" fill="#fff"/>
+      <path d="M43 71 Q50 78 57 71" stroke="#2E2A26" stroke-width="3.4" fill="none" stroke-linecap="round"/>
+      <ellipse cx="26" cy="65" rx="5.5" ry="3.4" fill="#fff" opacity="0.45"/>
+      <ellipse cx="74" cy="65" rx="5.5" ry="3.4" fill="#fff" opacity="0.45"/>
+    </symbol>
+  </svg>
+
+  <div class="login-container">
+    <div class="login-card" id="loginCard">
+      <div class="login-header">
+        <div>
+          <div class="login-brand">Ber<em>dua</em></div>
+          <div class="login-desc">Masuk ke ruang kalian berdua</div>
+        </div>
+        <div class="login-mascot">
+          <svg viewBox="0 0 100 100" style="color:var(--terra)"><use href="#blob"/></svg>
+        </div>
+      </div>
+
+      <form id="loginForm">
+        <div class="form-group">
+          <label class="form-label" for="emailInput">Email</label>
+          <input 
+            type="email" 
+            id="emailInput" 
+            class="form-input" 
+            placeholder="nama@email.com" 
+            required 
+            autocomplete="email"
+          >
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="passwordInput">Kata Sandi</label>
+          <input 
+            type="password" 
+            id="passwordInput" 
+            class="form-input" 
+            placeholder="••••••••" 
+            required 
+            autocomplete="current-password"
+          >
+        </div>
+
+        <div class="login-options">
+          <div></div>
+          <button type="button" class="forgot-link" id="btnForgot">Lupa kata sandi?</button>
+        </div>
+
+        <button type="submit" class="btn-primary" id="btnSubmit">
+          Masuk
+        </button>
+      </form>
+
+      <button type="button" class="install-pwa-btn" id="btnInstallPwa">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+          <polyline points="7 10 12 15 17 10"></polyline>
+          <line x1="12" y1="15" x2="12" y2="3"></line>
+        </svg>
+        Pasang aplikasi ke layar utama
+      </button>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script type="module">
+    import { login, sendPasswordReset, redirectIfAuth } from './js/auth.js';
+    import { showToast, shakeElement } from './js/fx.js';
+    import { isSupabaseConfigured } from './js/supabaseClient.js';
+
+    // Cek jika sudah login, langsung ke index
+    redirectIfAuth();
+
+    const form = document.getElementById('loginForm');
+    const emailInput = document.getElementById('emailInput');
+    const passwordInput = document.getElementById('passwordInput');
+    const btnSubmit = document.getElementById('btnSubmit');
+    const btnForgot = document.getElementById('btnForgot');
+    const loginCard = document.getElementById('loginCard');
+    const btnInstall = document.getElementById('btnInstallPwa');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = emailInput.value.trim();
+      const password = passwordInput.value;
+
+      if (!email || !password) return;
+
+      btnSubmit.disabled = true;
+      btnSubmit.textContent = 'Memeriksa…';
+
+      const { data, error } = await login(email, password);
+
+      if (error) {
+        btnSubmit.disabled = false;
+        btnSubmit.textContent = 'Masuk';
+        shakeElement(loginCard);
+        showToast('Email atau password salah');
+        return;
+      }
+
+      showToast('Berhasil masuk!');
+      setTimeout(() => {
+        window.location.href = 'index.html';
+      }, 500);
+    });
+
+    btnForgot.addEventListener('click', async () => {
+      const email = emailInput.value.trim();
+      if (!email) {
+        showToast('Ketik email kamu terlebih dahulu');
+        emailInput.focus();
+        return;
+      }
+      btnForgot.textContent = 'Mengirim…';
+      const { error } = await sendPasswordReset(email);
+      btnForgot.textContent = 'Lupa kata sandi?';
+
+      if (error) {
+        showToast(error.message || 'Gagal mengirim email reset');
+      } else {
+        showToast('Tautan reset kata sandi telah dikirim ke email');
+      }
+    });
+
+    // Handle PWA Install Prompt
+    let deferredPrompt = null;
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      btnInstall.style.display = 'flex';
+    });
+
+    btnInstall.addEventListener('click', async () => {
+      if (!deferredPrompt) return;
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === 'accepted') {
+        btnInstall.style.display = 'none';
+      }
+      deferredPrompt = null;
+    });
+  </script>
+</body>
+</html>

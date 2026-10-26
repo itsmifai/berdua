@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Berdua</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<!-- ===== SVG symbols: maskot & karakter ===== -->
+<svg style="display:none" xmlns="http://www.w3.org/2000/svg">
+  <symbol id="blob" viewBox="0 0 100 100">
+    <ellipse cx="50" cy="60" rx="36" ry="34" fill="currentColor"/>
+    <ellipse cx="13" cy="63" rx="8" ry="5.5" fill="currentColor" transform="rotate(-18 13 63)"/>
+    <ellipse cx="87" cy="63" rx="8" ry="5.5" fill="currentColor" transform="rotate(18 87 63)"/>
+    <path d="M50 27c0-7 7-12 14-11-1 8-7 13-14 11z" fill="#7D9B76"/>
+    <ellipse cx="37" cy="54" rx="9" ry="10.5" fill="#fff"/>
+    <ellipse cx="63" cy="54" rx="9" ry="10.5" fill="#fff"/>
+    <circle cx="39" cy="56" r="4.2" fill="#2E2A26"/>
+    <circle cx="65" cy="56" r="4.2" fill="#2E2A26"/>
+    <circle cx="40.5" cy="54.3" r="1.4" fill="#fff"/>
+    <circle cx="66.5" cy="54.3" r="1.4" fill="#fff"/>
+    <path d="M43 71 Q50 78 57 71" stroke="#2E2A26" stroke-width="3.4" fill="none" stroke-linecap="round"/>
+    <ellipse cx="26" cy="65" rx="5.5" ry="3.4" fill="#fff" opacity="0.45"/>
+    <ellipse cx="74" cy="65" rx="5.5" ry="3.4" fill="#fff" opacity="0.45"/>
+  </symbol>
+  <symbol id="blob-sad" viewBox="0 0 100 100">
+    <ellipse cx="50" cy="60" rx="36" ry="34" fill="#DDD5C8"/>
+    <ellipse cx="13" cy="63" rx="8" ry="5.5" fill="#DDD5C8" transform="rotate(-18 13 63)"/>
+    <ellipse cx="87" cy="63" rx="8" ry="5.5" fill="#DDD5C8" transform="rotate(18 87 63)"/>
+    <ellipse cx="37" cy="54" rx="9" ry="10.5" fill="#fff"/>
+    <ellipse cx="63" cy="54" rx="9" ry="10.5" fill="#fff"/>
+    <circle cx="39" cy="57" r="4.2" fill="#2E2A26"/>
+    <circle cx="65" cy="57" r="4.2" fill="#2E2A26"/>
+    <path d="M43 75 Q50 69 57 75" stroke="#2E2A26" stroke-width="3.4" fill="none" stroke-linecap="round"/>
+  </symbol>
+  <symbol id="flamechar" viewBox="0 0 84 96">
+    <path d="M42 4C42 4 54 22 54 34C54 40 50 44 46 44C42 44 39 41 39 37C39 33 41 30 41 30C41 30 30 38 26 52C24 59 25 66 28 72C22 70 17 64 15 57C13 62 12 68 13 74C15 86 27 94 42 94C57 94 70 85 71 71C72 52 58 42 52 30C48 22 42 4 42 4Z" fill="url(#fg1)"/>
+    <path d="M42 50C42 50 52 62 52 72C52 81 47 86 42 86C37 86 32 81 32 72C32 62 42 50 42 50Z" fill="url(#fg2)"/>
+    <ellipse cx="34" cy="66" rx="5.5" ry="7" fill="#fff"/>
+    <ellipse cx="50" cy="66" rx="5.5" ry="7" fill="#fff"/>
+    <circle cx="35.2" cy="67.5" r="2.8" fill="#5B3A16"/>
+    <circle cx="51.2" cy="67.5" r="2.8" fill="#5B3A16"/>
+    <path d="M37 78 Q42 83 47 78" stroke="#5B3A16" stroke-width="2.6" fill="none" stroke-linecap="round"/>
+    <ellipse cx="26" cy="74" rx="3.6" ry="2.4" fill="#fff" opacity="0.5"/>
+    <ellipse cx="58" cy="74" rx="3.6" ry="2.4" fill="#fff" opacity="0.5"/>
+    <defs>
+      <linearGradient id="fg1" x1="42" y1="4" x2="42" y2="94" gradientUnits="userSpaceOnUse">
+        <stop stop-color="#F5A623"/><stop offset="1" stop-color="#E2725B"/>
+      </linearGradient>
+      <linearGradient id="fg2" x1="42" y1="50" x2="42" y2="86" gradientUnits="userSpaceOnUse">
+        <stop stop-color="#FFD98A"/><stop offset="1" stop-color="#F5A623"/>
+      </linearGradient>
+    </defs>
+  </symbol>
+  <symbol id="crown" viewBox="0 0 24 24">
+    <path d="M3 18h18l-2-9-5 4-2-7-2 7-5-4-2 9z" fill="#F5A623" stroke="#D18A10" stroke-width="1.4" stroke-linejoin="round"/>
+  </symbol>
+</svg>
+
+<div class="phone">
+
+  <!-- ===== SPLASH (loading screen) ===== -->
+  <div class="splash" id="splash">
+    <div class="splash-logo">Ber<em>dua</em></div>
+    <div class="splash-sub">Menyiapkan ruang kalian…</div>
+
+    <div class="splash-track">
+      <!-- maskot jalan: badan dan lengan dibungkus <g> terpisah agar bisa dianimasikan -->
+      <svg class="walk-blob lead" viewBox="0 0 100 100" style="color:var(--terra)">
+        <g class="bw-arm-a"><ellipse cx="13" cy="63" rx="8" ry="5.5" fill="currentColor"/></g>
+        <g class="bw-arm-b"><ellipse cx="87" cy="63" rx="8" ry="5.5" fill="currentColor"/></g>
+        <g class="bw-body">
+          <ellipse cx="50" cy="60" rx="36" ry="34" fill="currentColor"/>
+          <path d="M50 27c0-7 7-12 14-11-1 8-7 13-14 11z" fill="#7D9B76"/>
+          <ellipse cx="37" cy="54" rx="9" ry="10.5" fill="#fff"/>
+          <ellipse cx="63" cy="54" rx="9" ry="10.5" fill="#fff"/>
+          <circle cx="39" cy="56" r="4.2" fill="#2E2A26"/>
+          <circle cx="65" cy="56" r="4.2" fill="#2E2A26"/>
+          <circle cx="40.5" cy="54.3" r="1.4" fill="#fff"/>
+          <circle cx="66.5" cy="54.3" r="1.4" fill="#fff"/>
+          <path d="M43 71 Q50 78 57 71" stroke="#2E2A26" stroke-width="3.4" fill="none" stroke-linecap="round"/>
+          <ellipse cx="26" cy="65" rx="5.5" ry="3.4" fill="#fff" opacity="0.45"/>
+          <ellipse cx="74" cy="65" rx="5.5" ry="3.4" fill="#fff" opacity="0.45"/>
+        </g>
+      </svg>
+
+      <svg class="walk-blob follow" viewBox="0 0 100 100" style="color:var(--sage)">
+        <g class="bw-arm-a"><ellipse cx="13" cy="63" rx="8" ry="5.5" fill="currentColor"/></g>
+        <g class="bw-arm-b"><ellipse cx="87" cy="63" rx="8" ry="5.5" fill="currentColor"/></g>
+        <g class="bw-body">
+          <ellipse cx="50" cy="60" rx="36" ry="34" fill="currentColor"/>
+          <path d="M50 27c0-7 7-12 14-11-1 8-7 13-14 11z" fill="#7D9B76"/>
+          <ellipse cx="37" cy="54" rx="9" ry="10.5" fill="#fff"/>
+          <ellipse cx="63" cy="54" rx="9" ry="10.5" fill="#fff"/>
+          <circle cx="39" cy="56" r="4.2" fill="#2E2A26"/>
+          <circle cx="65" cy="56" r="4.2" fill="#2E2A26"/>
+          <circle cx="40.5" cy="54.3" r="1.4" fill="#fff"/>
+          <circle cx="66.5" cy="54.3" r="1.4" fill="#fff"/>
+          <path d="M43 71 Q50 78 57 71" stroke="#2E2A26" stroke-width="3.4" fill="none" stroke-linecap="round"/>
+          <ellipse cx="26" cy="65" rx="5.5" ry="3.4" fill="#fff" opacity="0.45"/>
+          <ellipse cx="74" cy="65" rx="5.5" ry="3.4" fill="#fff" opacity="0.45"/>
+        </g>
+      </svg>
+    </div>
+
+    <div class="splash-skip">ketuk untuk melewatkan</div>
+  </div>
+
+  <!-- Header -->
+  <header class="app-header">
+    <div class="app-name">Ber<em>dua</em></div>
+    <div class="stat-pills">
+      <div class="pill flame-pill" id="headerFlamePill">
+        <svg viewBox="0 0 84 96"><use href="#flamechar"/></svg>
+        <span id="pill-streak">0</span>
+      </div>
+      <div class="pill xp-pill" id="headerXpPill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round">
+          <path d="M13 2L4.5 13.5H11L9.5 22 19 9.5h-6.5L13 2z" fill="#F5A623" stroke="#D18A10"/>
+        </svg>
+        <span id="pill-xp">0</span>
+      </div>
+    </div>
+    <div class="duo-avatars">
+      <div class="avatar me" id="av-me">
+        <svg class="blob" viewBox="0 0 100 100" style="color:var(--terra)"><use href="#blob"/></svg>
+        <span class="active-tick">
+          <svg viewBox="0 0 12 12" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round"><path d="M2 6.5L4.5 9L10 3.5"/></svg>
+        </span>
+      </div>
+      <div class="avatar you" id="av-you">
+        <svg class="blob" viewBox="0 0 100 100" style="color:var(--sage)"><use href="#blob"/></svg>
+        <span class="active-tick">
+          <svg viewBox="0 0 12 12" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round"><path d="M2 6.5L4.5 9L10 3.5"/></svg>
+        </span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Views -->
+  <main class="views" id="views">
+
+    <!-- ========== TAB 1: HARI INI ========== -->
+    <section class="view active" id="view-today">
+      <!-- Flame Card -->
+      <div class="flame-card" id="flameCard">
+        <div class="flame-stage">
+          <div class="flame-mascot left" id="mascotLeft">
+            <svg viewBox="0 0 100 100" style="color:var(--terra)"><use href="#blob"/></svg>
+          </div>
+          <div class="flame-wrap">
+            <div class="flame-glow"></div>
+            <svg class="flame-svg" viewBox="0 0 84 96"><use href="#flamechar"/></svg>
+          </div>
+          <div class="flame-mascot" id="mascotRight">
+            <svg viewBox="0 0 100 100" style="color:var(--sage)"><use href="#blob"/></svg>
+          </div>
+        </div>
+        <div class="flame-count" id="streak-count">0 <span>hari</span></div>
+        <div class="flame-status" id="streakStatus">Memuat api bersama…</div>
+        <div class="flame-progress">
+          <div class="fp-person" id="fpp-me"><span class="fp-dot me" id="fp-me"></span> <span id="label-me">Kamu</span></div>
+          <div class="fp-person" id="fpp-you"><span class="fp-dot" id="fp-you"></span> <span id="label-you">Dia</span></div>
+        </div>
+      </div>
+
+      <!-- Misi Hari Ini -->
+      <div class="sec-title">
+        Misi Hari Ini 
+        <button type="button" data-switch="misi">Semua ›</button>
+      </div>
+      <div class="card" id="today-missions">
+        <div class="empty-state" style="padding: 16px 8px;">
+          <p>Memuat misi hari ini…</p>
+        </div>
+      </div>
+
+      <!-- Agenda Terdekat -->
+      <div class="sec-title">
+        Agenda Terdekat 
+        <button type="button" data-switch="agenda">Kalender ›</button>
+      </div>
+      <div class="card" id="upcoming-agenda">
+        <div class="empty-state" style="padding: 16px 8px;">
+          <p>Memuat agenda terdekat…</p>
+        </div>
+      </div>
+
+      <!-- Gift Strip -->
+      <div class="gift-strip" id="giftStrip" style="display:none;" data-switch="poin">
+        <svg class="mascot-mini" viewBox="0 0 100 100" style="color:var(--amber)"><use href="#blob"/></svg>
+        <div class="g-txt">
+          <div id="giftStripText">Tukar XP dengan kupon!</div>
+          <small id="giftStripSub">Kupon termurah menantimu</small>
+        </div>
+        <div class="g-go">›</div>
+      </div>
+    </section>
+
+    <!-- ========== TAB 2: AGENDA ========== -->
+    <section class="view" id="view-agenda">
+      <div class="card">
+        <div class="cal-header">
+          <div class="cal-month" id="cal-month-title">Bulan</div>
+          <div class="cal-nav">
+            <button type="button" id="btnCalPrev" aria-label="Bulan sebelumnya">‹</button>
+            <button type="button" id="btnCalNext" aria-label="Bulan berikutnya">›</button>
+          </div>
+        </div>
+        <div class="cal-grid" id="cal-dow-grid">
+          <div class="cal-dow">Min</div>
+          <div class="cal-dow">Sen</div>
+          <div class="cal-dow">Sel</div>
+          <div class="cal-dow">Rab</div>
+          <div class="cal-dow">Kam</div>
+          <div class="cal-dow">Jum</div>
+          <div class="cal-dow">Sab</div>
+        </div>
+        <div class="cal-grid" id="cal-grid"></div>
+        <div class="legend">
+          <span><i style="background:var(--terra)"></i> Kencan</span>
+          <span><i style="background:var(--sage)"></i> Ibadah</span>
+          <span><i style="background:#8FA3B8"></i> Kerja</span>
+          <span><i style="background:var(--amber)"></i> Spesial</span>
+        </div>
+      </div>
+
+      <div class="sec-title" id="agenda-list-title">Agenda Tanggal</div>
+      <div class="card" id="agenda-day-list">
+        <div class="empty-state">
+          <svg class="sad-blob" viewBox="0 0 100 100"><use href="#blob-sad"/></svg>
+          <p>Kosong — yuk bikin rencana berdua!</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== TAB 3: MISI ========== -->
+    <section class="view" id="view-misi">
+      <!-- Kartu Duel Mingguan -->
+      <div class="card">
+        <div class="vs-board">
+          <div class="vs-side" id="vs-you">
+            <div class="mascot-big">
+              <svg viewBox="0 0 100 100" style="color:var(--sage)"><use href="#blob"/></svg>
+            </div>
+            <div class="vs-name" id="vs-name-you">Dia</div>
+            <div class="vs-xp" id="lb-you">0</div>
+          </div>
+          <div class="vs-mid">VS</div>
+          <div class="vs-side" id="vs-me">
+            <div class="mascot-big">
+              <svg viewBox="0 0 100 100" style="color:var(--terra)"><use href="#blob"/></svg>
+            </div>
+            <div class="vs-name" id="vs-name-me">Kamu</div>
+            <div class="vs-xp" id="lb-me">0</div>
+          </div>
+        </div>
+        <div class="lb-caption" id="lb-caption">Memuat leaderboard…</div>
+        <div class="progress-track">
+          <div class="pf-you" id="bar-you" style="width:50%"></div>
+          <div class="pf-me" id="bar-me" style="width:50%"></div>
+        </div>
+      </div>
+
+      <div class="sec-title">
+        Daftar Misi Aktif
+        <button type="button" id="btnOpenAddMission">+ Tambah Misi</button>
+      </div>
+      <div class="card" id="all-missions-list">
+        <div class="empty-state">
+          <p>Belum ada misi. Buat misi pertamamu!</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== TAB 4: POIN ========== -->
+    <section class="view" id="view-poin">
+      <div class="xp-balance" id="xpBalanceCard">
+        <svg class="blob" viewBox="0 0 100 100" style="color:var(--amber)"><use href="#blob"/></svg>
+        <div>
+          <div class="lbl">XP Kamu</div>
+          <div class="val" id="xp-total">0 <small>XP</small></div>
+        </div>
+      </div>
+
+      <div class="sec-title">
+        Toko Kupon
+        <button type="button" id="btnOpenAddCoupon">+ Bikin Kupon</button>
+      </div>
+      <div id="coupons-container">
+        <div class="card">
+          <div class="empty-state">
+            <p>Memuat kupon…</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="sec-title">Riwayat Penukaran Terakhir</div>
+      <div class="card" id="redemptions-history">
+        <div class="empty-state" style="padding:12px;">
+          <p>Belum ada kupon yang ditukar</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== TAB 5: PROFIL ========== -->
+    <section class="view" id="view-profil">
+      <div class="profile-head">
+        <div class="profile-mascot">
+          <svg viewBox="0 0 100 100" style="color:var(--terra)" id="profileMascotSvg"><use href="#blob"/></svg>
+        </div>
+        <div class="profile-name" id="profileDisplayName">Nama Pengguna</div>
+        <div class="profile-since" id="profileRankLabel">Level 1 · Pemula</div>
+      </div>
+
+      <div class="stat-grid">
+        <div class="stat-box">
+          <div class="v" id="statMissionsDone">0</div>
+          <div class="k">Misi Selesai</div>
+        </div>
+        <div class="stat-box">
+          <div class="v" id="statCurrentStreak">0</div>
+          <div class="k">Api Saat Ini</div>
+        </div>
+        <div class="stat-box">
+          <div class="v" id="statLongestStreak">0</div>
+          <div class="k">Api Rekor</div>
+        </div>
+      </div>
+
+      <div class="sec-title">Koleksi Badge</div>
+      <div class="badge-grid" id="badgeGrid">
+        <div class="badge locked" id="badge-7">
+          <svg class="badge-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+          <span>7 Hari</span>
+        </div>
+        <div class="badge locked" id="badge-30">
+          <svg class="badge-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+          <span>30 Hari</span>
+        </div>
+        <div class="badge locked" id="badge-100">
+          <svg class="badge-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+          <span>100 Hari</span>
+        </div>
+        <div class="badge locked" id="badge-365">
+          <svg class="badge-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+          <span>1 Tahun</span>
+        </div>
+      </div>
+
+      <div class="sec-title">Pengaturan</div>
+      <div class="card" style="padding: 6px 18px;">
+        <button type="button" class="settings-row" id="btnEditName">
+          <div class="s-ico" style="background:var(--terra-soft);color:var(--terra)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          </div>
+          <span>Ubah Nama Tampilan</span>
+          <span class="chev">›</span>
+        </button>
+        <button type="button" class="settings-row" id="btnLogout">
+          <div class="s-ico" style="background:#FDEEE7;color:var(--terra)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          </div>
+          <span>Keluar dari Akun</span>
+          <span class="chev">›</span>
+        </button>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- FAB (Floating Action Button) untuk tambah Agenda -->
+  <button type="button" class="fab" id="fab" style="display:none;" aria-label="Tambah Agenda">+</button>
+
+  <!-- Bottom Navigation (5 Tab) -->
+  <nav class="bottom-nav">
+    <button type="button" class="nav-btn active" data-view="today">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
+        <polyline points="9 22 9 12 15 12 15 22"/>
+      </svg>
+      Hari Ini
+    </button>
+    <button type="button" class="nav-btn" data-view="agenda">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+        <line x1="16" y1="2" x2="16" y2="6"/>
+        <line x1="8" y1="2" x2="8" y2="6"/>
+        <line x1="3" y1="10" x2="21" y2="10"/>
+      </svg>
+      Agenda
+    </button>
+    <button type="button" class="nav-btn" data-view="misi">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M22 11.08V12a10 10 0 11-5.93-9.14"/>
+        <polyline points="22 4 12 14.01 9 11.01"/>
+      </svg>
+      Misi
+    </button>
+    <button type="button" class="nav-btn" data-view="poin">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M20 12v9H4v-9M2 7h20v5H2zM12 21V7M12 7H7.5a2.5 2.5 0 110-5C11 2 12 7 12 7zM12 7h4.5a2.5 2.5 0 100-5C13 2 12 7 12 7z"/>
+      </svg>
+      Poin
+    </button>
+    <button type="button" class="nav-btn" data-view="profil">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/>
+        <circle cx="12" cy="7" r="4"/>
+      </svg>
+      Profil
+    </button>
+  </nav>
+
+  <!-- Toast Container -->
+  <div class="toast" id="toast"></div>
+
+</div>
+
+<!-- Modal / Bottom Sheet Backdrop -->
+<div class="sheet-backdrop" id="sheetBackdrop"></div>
+
+<script type="module" src="js/app.js"></script>
+</body>
+</html>
