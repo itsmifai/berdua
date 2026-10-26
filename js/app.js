@@ -6,6 +6,7 @@ import { requireAuth, getCurrentProfile, logout } from './auth.js';
 import { showToast } from './fx.js';
 import { isSupabaseConfigured } from './supabaseClient.js';
 import { initAgenda } from './agenda.js';
+import { initMisi } from './misi.js';
 
 // State Global Aplikasi
 export const state = {
@@ -103,7 +104,19 @@ async function init() {
   // 4. Inisialisasi Fitur Agenda (Fase 2)
   await initAgenda();
 
-  // 5. Hook logout button
+  // 5. Inisialisasi Fitur Misi & XP (Fase 3)
+  await initMisi();
+
+  // 6. Global Backdrop Sheet Close Handler
+  const backdrop = document.getElementById('sheetBackdrop');
+  if (backdrop) {
+    backdrop.addEventListener('click', () => {
+      document.querySelectorAll('.bottom-sheet').forEach(sheet => sheet.classList.remove('active'));
+      backdrop.classList.remove('active');
+    });
+  }
+
+  // 7. Hook logout button
   const btnLogout = document.getElementById('btnLogout');
   if (btnLogout) {
     btnLogout.addEventListener('click', async () => {

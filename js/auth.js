@@ -18,7 +18,7 @@ export async function getSession() {
 }
 
 /**
- * Mendapatkan profil pengguna yang sedang login beserta couple_id
+ * Mendapatkan profil pengguna yang sedang login beserta couple_id dan partner
  */
 export async function getCurrentProfile() {
   const session = await getSession();
@@ -34,7 +34,21 @@ export async function getCurrentProfile() {
     console.error('Error fetching profile:', error);
     return null;
   }
-  return profile;
+
+  // Ambil profil pasangan bila couple_id ada
+  let partner = null;
+  if (profile.couple_id) {
+    const { data: partnerData } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('couple_id', profile.couple_id)
+      .neq('id', profile.id)
+      .maybeSingle();
+
+    partner = partnerData;
+  }
+
+  return { ...profile, partner };
 }
 
 /**

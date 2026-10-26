@@ -466,6 +466,43 @@
     </form>
   </div>
 
+  <!-- Bottom Sheet: Misi -->
+  <div class="bottom-sheet" id="sheetMission">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title" id="sheetMissionTitle">Tambah Misi</div>
+    <form id="formMission">
+      <input type="hidden" id="missionId">
+      <input type="hidden" id="missionDifficulty" value="easy">
+      <input type="hidden" id="missionAssignee" value="">
+
+      <div class="form-group">
+        <label class="form-label" for="missionTitle">Judul Misi</label>
+        <input type="text" id="missionTitle" class="form-input" placeholder="misal: Minum air putih 2 liter / Kirim pap" maxlength="60" required>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Tingkat Kesulitan & XP</label>
+        <div class="chips-row" id="missionDiffChips">
+          <button type="button" class="chip-btn sage selected" data-diff="easy">Mudah +10</button>
+          <button type="button" class="chip-btn" data-diff="medium">Sedang +25</button>
+          <button type="button" class="chip-btn terra" data-diff="hard">Sulit +50</button>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Ditugaskan Untuk</label>
+        <div class="chips-row" id="missionAssigneeChips">
+          <button type="button" class="chip-btn selected" data-assignee="">Siapa saja</button>
+          <button type="button" class="chip-btn" data-assignee="me">Kamu</button>
+          <button type="button" class="chip-btn" data-assignee="you">Dia</button>
+        </div>
+      </div>
+
+      <button type="submit" class="btn-primary" id="btnSaveMission">Simpan Misi</button>
+      <button type="button" class="btn-secondary" id="btnDeleteMission" style="display:none; color:var(--terra); margin-top:10px;">Hapus Misi</button>
+    </form>
+  </div>
+
 </div>
 
 <script type="module" src="js/app.js"></script>
