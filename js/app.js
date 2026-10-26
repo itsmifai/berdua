@@ -5,6 +5,7 @@
 import { requireAuth, getCurrentProfile, logout } from './auth.js';
 import { showToast } from './fx.js';
 import { isSupabaseConfigured } from './supabaseClient.js';
+import { initAgenda } from './agenda.js';
 
 // State Global Aplikasi
 export const state = {
@@ -99,7 +100,10 @@ async function init() {
     renderUserHeader(profile);
   }
 
-  // 4. Hook logout button
+  // 4. Inisialisasi Fitur Agenda (Fase 2)
+  await initAgenda();
+
+  // 5. Hook logout button
   const btnLogout = document.getElementById('btnLogout');
   if (btnLogout) {
     btnLogout.addEventListener('click', async () => {

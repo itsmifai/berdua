@@ -1357,15 +1357,29 @@ body {
   color: #fff;
 }
 
+.chip-btn[data-cat="kencan"].selected,
 .chip-btn.terra.selected {
   background: var(--terra);
   border-color: var(--terra);
   color: #fff;
 }
 
+.chip-btn[data-cat="ibadah"].selected,
 .chip-btn.sage.selected {
   background: var(--sage);
   border-color: var(--sage);
+  color: #fff;
+}
+
+.chip-btn[data-cat="kerja"].selected {
+  background: #8FA3B8;
+  border-color: #8FA3B8;
+  color: #fff;
+}
+
+.chip-btn[data-cat="spesial"].selected {
+  background: var(--amber);
+  border-color: var(--amber);
   color: #fff;
 }
 
