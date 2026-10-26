@@ -1,0 +1,939 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Berdua — Prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #FAF5EE;
+    --card: #FFFFFF;
+    --terra: #E2725B;
+    --terra-soft: #FBEDE9;
+    --sage: #7D9B76;
+    --sage-soft: #EEF3EC;
+    --amber: #F5A623;
+    --amber-soft: #FDF3E0;
+    --ink: #2E2A26;
+    --ink-soft: #8A837B;
+    --ink-faint: #B8B1A8;
+    --line: #EFE9DF;
+    --r: 18px;
+    --shadow: 0 2px 12px rgba(46, 42, 38, 0.05);
+    --shadow-lg: 0 8px 28px rgba(46, 42, 38, 0.10);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    background: #EFE9DF;
+    font-family: "Plus Jakarta Sans", sans-serif;
+    color: var(--ink);
+    display: flex; flex-direction: column; align-items: center;
+    min-height: 100vh;
+  }
+
+  .proto-caption {
+    padding: 18px 12px 10px;
+    font-size: 12px; color: var(--ink-soft);
+    font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase;
+    text-align: center;
+  }
+
+  /* ===== Phone frame ===== */
+  .phone {
+    width: 100%; max-width: 420px;
+    min-height: 860px; height: calc(100vh - 60px); max-height: 900px;
+    background: var(--bg);
+    border-radius: 32px;
+    border: 1px solid #E0D8CB;
+    box-shadow: var(--shadow-lg);
+    position: relative;
+    overflow: hidden;
+    display: flex; flex-direction: column;
+    margin-bottom: 30px;
+  }
+  @media (max-width: 480px) {
+    body { background: var(--bg); }
+    .proto-caption { display: none; }
+    .phone { max-width: none; height: 100vh; max-height: none; border-radius: 0; border: none; margin-bottom: 0; }
+  }
+
+  /* ===== App header ===== */
+  .app-header {
+    padding: 20px 22px 14px;
+    display: flex; align-items: center; justify-content: space-between;
+    background: var(--bg);
+    z-index: 10;
+  }
+  .app-name {
+    font-family: "Fraunces", serif; font-weight: 600; font-size: 22px;
+    letter-spacing: -0.01em;
+  }
+  .app-name em { font-style: normal; color: var(--terra); }
+  .duo-avatars { display: flex; align-items: center; }
+  .avatar {
+    width: 38px; height: 38px; border-radius: 50%;
+    border: 2.5px solid var(--bg);
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 13px; color: #fff;
+    position: relative;
+  }
+  .avatar.me { background: var(--terra); margin-right: -10px; z-index: 2; }
+  .avatar.you { background: var(--sage); }
+  .avatar .active-tick {
+    position: absolute; bottom: -2px; right: -2px;
+    width: 14px; height: 14px; border-radius: 50%;
+    background: var(--sage); border: 2px solid var(--bg);
+    display: flex; align-items: center; justify-content: center;
+    opacity: 0; transform: scale(0.5); transition: all 0.25s;
+  }
+  .avatar .active-tick svg { width: 7px; height: 7px; }
+  .avatar.active .active-tick { opacity: 1; transform: scale(1); }
+  .avatar.me .active-tick { background: var(--terra); }
+
+  /* ===== Main scroll area ===== */
+  .views { flex: 1; overflow-y: auto; scrollbar-width: none; }
+  .views::-webkit-scrollbar { display: none; }
+  .view { display: none; padding: 6px 22px 110px; animation: fadeIn 0.25s ease; }
+  .view.active { display: block; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+  /* ===== Bottom nav ===== */
+  .bottom-nav {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    background: rgba(255, 255, 255, 0.92);
+    backdrop-filter: blur(14px);
+    border-top: 1px solid var(--line);
+    display: flex; justify-content: space-around;
+    padding: 10px 8px 14px;
+    z-index: 20;
+  }
+  .nav-btn {
+    background: none; border: none; cursor: pointer;
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    color: var(--ink-faint); font-family: inherit;
+    font-size: 10.5px; font-weight: 700;
+    padding: 4px 10px; border-radius: 12px;
+    transition: color 0.15s;
+  }
+  .nav-btn svg { width: 22px; height: 22px; stroke-width: 2; }
+  .nav-btn.active { color: var(--terra); }
+  .nav-btn:not(.active):hover { color: var(--ink-soft); }
+
+  /* ===== Cards & common ===== */
+  .card {
+    background: var(--card); border-radius: var(--r);
+    box-shadow: var(--shadow); padding: 20px;
+    margin-bottom: 16px;
+  }
+  .sec-title {
+    font-size: 13px; font-weight: 800; text-transform: uppercase;
+    letter-spacing: 0.08em; color: var(--ink-soft);
+    margin: 22px 2px 12px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .sec-title a { color: var(--terra); text-decoration: none; font-size: 12px; font-weight: 700; text-transform: none; letter-spacing: 0; }
+
+  .chip {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 11px; font-weight: 700;
+    padding: 4px 10px; border-radius: 999px;
+  }
+  .chip.xp { background: var(--amber-soft); color: #B57A12; }
+  .chip.easy { background: var(--sage-soft); color: var(--sage); }
+  .chip.medium { background: var(--amber-soft); color: #C08A1E; }
+  .chip.hard { background: var(--terra-soft); color: var(--terra); }
+
+  /* ===== FLAME card ===== */
+  .flame-card {
+    background: linear-gradient(160deg, #FFF7EC 0%, #FDEEE7 100%);
+    border: 1px solid #F3DFCF;
+    border-radius: 22px;
+    padding: 26px 22px;
+    text-align: center;
+    margin-bottom: 16px;
+    position: relative;
+    overflow: hidden;
+  }
+  .flame-wrap { position: relative; width: 84px; height: 96px; margin: 0 auto 12px; }
+  .flame-glow {
+    position: absolute; inset: -18px;
+    background: radial-gradient(circle, rgba(245,166,35,0.28) 0%, transparent 65%);
+    animation: glowPulse 2.4s ease-in-out infinite;
+  }
+  @keyframes glowPulse { 0%,100% { opacity: 0.7; transform: scale(1); } 50% { opacity: 1; transform: scale(1.12); } }
+  .flame-svg { position: relative; width: 84px; height: 96px; animation: flicker 1.6s ease-in-out infinite; transform-origin: bottom center; }
+  @keyframes flicker {
+    0%,100% { transform: scale(1) rotate(0deg); }
+    25% { transform: scale(1.04, 0.97) rotate(-1.5deg); }
+    50% { transform: scale(0.98, 1.05) rotate(1deg); }
+    75% { transform: scale(1.03, 0.98) rotate(-0.5deg); }
+  }
+  .flame-count {
+    font-family: "Fraunces", serif; font-weight: 600; font-size: 40px;
+    line-height: 1; color: var(--ink);
+  }
+  .flame-count span { font-size: 16px; font-family: "Plus Jakarta Sans"; font-weight: 700; color: var(--ink-soft); }
+  .flame-status { font-size: 13px; color: var(--ink-soft); margin-top: 6px; font-weight: 500; }
+  .flame-status b { color: var(--terra); font-weight: 800; }
+  .flame-progress { display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 16px; }
+  .fp-person { display: flex; align-items: center; gap: 7px; font-size: 12px; font-weight: 700; color: var(--ink-soft); }
+  .fp-dot { width: 10px; height: 10px; border-radius: 50%; background: #E5DCD0; transition: background 0.3s; }
+  .fp-dot.done { background: var(--sage); }
+  .fp-dot.done.me { background: var(--terra); }
+
+  /* ===== Mission rows ===== */
+  .mission-row {
+    display: flex; align-items: center; gap: 14px;
+    padding: 14px 4px;
+    border-bottom: 1px solid var(--line);
+  }
+  .mission-row:last-child { border-bottom: none; padding-bottom: 4px; }
+  .mission-row:first-of-type { padding-top: 4px; }
+  .m-check {
+    width: 26px; height: 26px; min-width: 26px; border-radius: 50%;
+    border: 2px solid #DCD4C8; background: none; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s;
+  }
+  .m-check svg { width: 12px; height: 12px; stroke: #fff; stroke-width: 3; opacity: 0; transition: opacity 0.15s; }
+  .m-check:hover { border-color: var(--sage); }
+  .mission-row.done .m-check { background: var(--sage); border-color: var(--sage); }
+  .mission-row.done .m-check svg { opacity: 1; }
+  .m-body { flex: 1; }
+  .m-title { font-size: 14.5px; font-weight: 700; transition: color 0.2s; }
+  .mission-row.done .m-title { color: var(--ink-faint); text-decoration: line-through; }
+  .m-meta { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
+  .m-who { font-size: 11.5px; font-weight: 700; color: var(--ink-soft); }
+  .m-xp { font-size: 11px; font-weight: 800; color: #C08A1E; background: var(--amber-soft); padding: 2px 8px; border-radius: 999px; }
+
+  /* ===== Agenda mini rows ===== */
+  .agenda-row {
+    display: flex; align-items: center; gap: 13px;
+    padding: 11px 4px;
+  }
+  .a-date {
+    min-width: 44px; text-align: center;
+    background: var(--bg); border-radius: 12px; padding: 7px 4px;
+  }
+  .a-date .d { font-family: "Fraunces", serif; font-size: 17px; font-weight: 600; line-height: 1; }
+  .a-date .m { font-size: 9.5px; font-weight: 800; text-transform: uppercase; color: var(--ink-faint); letter-spacing: 0.06em; margin-top: 3px; }
+  .a-info { flex: 1; }
+  .a-title { font-size: 14px; font-weight: 700; }
+  .a-sub { font-size: 12px; color: var(--ink-soft); margin-top: 2px; }
+  .cat-dot { width: 9px; height: 9px; border-radius: 50%; }
+  .cat-kencan { background: var(--terra); }
+  .cat-ibadah { background: var(--sage); }
+  .cat-kerja { background: #8FA3B8; }
+  .cat-spesial { background: var(--amber); }
+
+  /* ===== Calendar ===== */
+  .cal-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 14px;
+  }
+  .cal-month { font-family: "Fraunces", serif; font-size: 20px; font-weight: 600; }
+  .cal-nav { display: flex; gap: 8px; }
+  .cal-nav button {
+    width: 34px; height: 34px; border-radius: 50%;
+    border: 1px solid var(--line); background: var(--card); cursor: pointer;
+    color: var(--ink-soft); font-size: 14px;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s;
+  }
+  .cal-nav button:hover { border-color: var(--terra); color: var(--terra); }
+  .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+  .cal-dow {
+    text-align: center; font-size: 10.5px; font-weight: 800;
+    color: var(--ink-faint); text-transform: uppercase; padding: 6px 0;
+  }
+  .cal-day {
+    aspect-ratio: 1; border-radius: 12px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+    font-size: 13.5px; font-weight: 600; color: var(--ink);
+    cursor: pointer; border: 1.5px solid transparent;
+    transition: all 0.12s; position: relative;
+    background: none; font-family: inherit;
+  }
+  .cal-day:hover { background: var(--terra-soft); }
+  .cal-day.empty { pointer-events: none; }
+  .cal-day.today { color: var(--terra); font-weight: 800; }
+  .cal-day.today::after { content: ""; position: absolute; bottom: 5px; width: 4px; height: 4px; border-radius: 50%; background: var(--terra); }
+  .cal-day.selected { background: var(--ink); color: #fff; }
+  .cal-day.selected.today { color: #fff; }
+  .cal-day.selected.today::after { background: #fff; }
+  .cal-dots { display: flex; gap: 2.5px; position: absolute; bottom: 5px; }
+  .cal-day.today .cal-dots, .cal-day.selected .cal-dots { bottom: 5px; }
+  .cal-dots i { width: 4px; height: 4px; border-radius: 50%; }
+
+  .legend { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 16px; padding: 0 4px; }
+  .legend span { display: flex; align-items: center; gap: 6px; font-size: 11.5px; font-weight: 600; color: var(--ink-soft); }
+  .legend i { width: 8px; height: 8px; border-radius: 50%; }
+
+  .fab {
+    position: absolute; bottom: 92px; right: 22px;
+    width: 54px; height: 54px; border-radius: 50%;
+    background: var(--terra); color: #fff; border: none; cursor: pointer;
+    box-shadow: 0 6px 18px rgba(226, 114, 91, 0.4);
+    font-size: 26px; font-weight: 500;
+    display: flex; align-items: center; justify-content: center;
+    transition: transform 0.15s;
+    z-index: 15;
+  }
+  .fab:hover { transform: scale(1.08); }
+
+  .empty-state {
+    text-align: center; padding: 30px 16px; color: var(--ink-faint);
+  }
+  .empty-state svg { width: 64px; height: 64px; stroke: #D8D0C4; stroke-width: 1.4; margin-bottom: 12px; }
+  .empty-state p { font-size: 13px; font-weight: 600; }
+
+  /* ===== Leaderboard ===== */
+  .lb-row {
+    display: flex; align-items: center; gap: 14px;
+    padding: 13px 4px;
+  }
+  .lb-rank {
+    font-family: "Fraunces", serif; font-size: 18px; font-weight: 600;
+    width: 28px; color: var(--ink-faint);
+  }
+  .lb-row .avatar { width: 36px; height: 36px; margin: 0; border: none; }
+  .lb-name { flex: 1; font-weight: 700; font-size: 14px; }
+  .lb-xp { font-weight: 800; font-size: 15px; color: #C08A1E; }
+  .lb-xp small { font-size: 10.5px; color: var(--ink-faint); font-weight: 700; }
+  .crown { color: var(--amber); }
+
+  .progress-track { height: 8px; border-radius: 99px; background: var(--bg); overflow: hidden; margin-top: 14px; }
+  .progress-fill { height: 100%; border-radius: 99px; background: linear-gradient(90deg, var(--amber), var(--terra)); transition: width 0.5s; }
+
+  /* ===== Points / coupons ===== */
+  .xp-balance {
+    background: linear-gradient(150deg, var(--ink) 0%, #4A423A 100%);
+    border-radius: 22px; padding: 26px 24px; color: #fff;
+    margin-bottom: 16px; position: relative; overflow: hidden;
+  }
+  .xp-balance::before {
+    content: ""; position: absolute; right: -30px; top: -30px;
+    width: 140px; height: 140px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(245,166,35,0.25), transparent 70%);
+  }
+  .xp-balance .lbl { font-size: 12px; font-weight: 700; opacity: 0.65; text-transform: uppercase; letter-spacing: 0.1em; }
+  .xp-balance .val { font-family: "Fraunces", serif; font-size: 44px; font-weight: 600; line-height: 1.15; }
+  .xp-balance .val small { font-family: "Plus Jakarta Sans"; font-size: 15px; font-weight: 700; opacity: 0.6; }
+  .xp-balance .sub { font-size: 12.5px; opacity: 0.65; font-weight: 500; }
+
+  .coupon {
+    display: flex; align-items: center; gap: 15px;
+    background: var(--card); border-radius: var(--r);
+    box-shadow: var(--shadow); padding: 16px 18px;
+    margin-bottom: 12px; position: relative;
+    border: 1px dashed transparent;
+  }
+  .coupon::before, .coupon::after {
+    content: ""; position: absolute; width: 16px; height: 16px;
+    border-radius: 50%; background: var(--bg);
+    top: 50%; transform: translateY(-50%);
+    border: 1px solid var(--line);
+  }
+  .coupon::before { left: -9px; clip-path: inset(0 0 0 50%); }
+  .coupon::after { right: -9px; clip-path: inset(0 50% 0 0); }
+  .coupon-icon {
+    width: 44px; height: 44px; min-width: 44px; border-radius: 13px;
+    background: var(--terra-soft); display: flex; align-items: center; justify-content: center;
+  }
+  .coupon-icon svg { width: 21px; height: 21px; stroke: var(--terra); stroke-width: 1.8; }
+  .coupon-body { flex: 1; }
+  .coupon-name { font-weight: 800; font-size: 14px; }
+  .coupon-desc { font-size: 12px; color: var(--ink-soft); margin-top: 2px; }
+  .coupon-price {
+    font-weight: 800; font-size: 13px; color: #C08A1E;
+    background: var(--amber-soft); padding: 7px 13px; border-radius: 999px;
+    border: none; cursor: pointer; font-family: inherit;
+    transition: transform 0.15s;
+  }
+  .coupon-price:hover { transform: scale(1.06); }
+  .coupon-price:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+  /* ===== Profile ===== */
+  .profile-head { text-align: center; padding: 14px 0 6px; }
+  .profile-avatar {
+    width: 84px; height: 84px; border-radius: 50%;
+    background: var(--terra); color: #fff;
+    font-weight: 800; font-size: 30px;
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 12px; box-shadow: 0 6px 20px rgba(226,114,91,0.3);
+  }
+  .profile-name { font-family: "Fraunces", serif; font-size: 24px; font-weight: 600; }
+  .profile-since { font-size: 12.5px; color: var(--ink-soft); font-weight: 600; margin-top: 3px; }
+
+  .stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 20px 0 16px; }
+  .stat-box {
+    background: var(--card); border-radius: 16px; box-shadow: var(--shadow);
+    padding: 16px 10px; text-align: center;
+  }
+  .stat-box .v { font-family: "Fraunces", serif; font-size: 22px; font-weight: 600; }
+  .stat-box .k { font-size: 10.5px; font-weight: 700; color: var(--ink-soft); margin-top: 3px; }
+
+  .badge-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+  .badge {
+    aspect-ratio: 1; border-radius: 16px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px;
+    background: var(--card); box-shadow: var(--shadow);
+    font-size: 10px; font-weight: 800; color: var(--ink-soft);
+  }
+  .badge svg { width: 26px; height: 26px; stroke-width: 1.8; }
+  .badge.earned svg { stroke: var(--amber); }
+  .badge.locked { opacity: 0.38; }
+  .badge.locked svg { stroke: var(--ink-faint); }
+
+  /* ===== Toast ===== */
+  .toast {
+    position: absolute; left: 50%; bottom: 96px; transform: translateX(-50%) translateY(20px);
+    background: var(--ink); color: #fff;
+    font-size: 13px; font-weight: 700;
+    padding: 12px 22px; border-radius: 999px;
+    opacity: 0; pointer-events: none; transition: all 0.3s;
+    z-index: 60; white-space: nowrap;
+    box-shadow: var(--shadow-lg);
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* ===== Confetti ===== */
+  .confetti {
+    position: absolute; width: 8px; height: 8px;
+    pointer-events: none; z-index: 80; border-radius: 2px;
+  }
+</style>
+</head>
+<body>
+
+<div class="proto-caption">Prototype — Berdua · klik-klik saja, semua interaktif</div>
+
+<div class="phone">
+
+  <!-- Header -->
+  <div class="app-header">
+    <div class="app-name">Ber<em>dua</em></div>
+    <div class="duo-avatars">
+      <div class="avatar me" id="av-me">M
+        <span class="active-tick"><svg viewBox="0 0 12 12" fill="none" stroke="#fff"><path d="M2 6.5L4.5 9L10 3.5"/></svg></span>
+      </div>
+      <div class="avatar you active" id="av-you">D
+        <span class="active-tick"><svg viewBox="0 0 12 12" fill="none" stroke="#fff"><path d="M2 6.5L4.5 9L10 3.5"/></svg></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Views -->
+  <div class="views" id="views">
+
+    <!-- ========== HARI INI ========== -->
+    <div class="view active" id="view-today">
+
+      <div class="flame-card">
+        <div class="flame-wrap">
+          <div class="flame-glow"></div>
+          <svg class="flame-svg" viewBox="0 0 84 96" fill="none">
+            <path d="M42 4C42 4 54 22 54 34C54 40 50 44 46 44C42 44 39 41 39 37C39 33 41 30 41 30C41 30 30 38 26 52C24 59 25 66 28 72C22 70 17 64 15 57C13 62 12 68 13 74C15 86 27 94 42 94C57 94 70 85 71 71C72 52 58 42 52 30C48 22 42 4 42 4Z" fill="url(#fg1)"/>
+            <path d="M42 46C42 46 50 56 50 66C50 76 46 82 42 82C38 82 34 76 34 66C34 56 42 46 42 46Z" fill="url(#fg2)"/>
+            <defs>
+              <linearGradient id="fg1" x1="42" y1="4" x2="42" y2="94" gradientUnits="userSpaceOnUse">
+                <stop stop-color="#F5A623"/><stop offset="1" stop-color="#E2725B"/>
+              </linearGradient>
+              <linearGradient id="fg2" x1="42" y1="46" x2="42" y2="82" gradientUnits="userSpaceOnUse">
+                <stop stop-color="#FFD98A"/><stop offset="1" stop-color="#F5A623"/>
+              </linearGradient>
+            </defs>
+          </svg>
+        </div>
+        <div class="flame-count" id="streak-count">12 <span>hari</span></div>
+        <div class="flame-status">Api bersama menyala — <b>hebat!</b></div>
+        <div class="flame-progress">
+          <div class="fp-person"><span class="fp-dot me" id="fp-me"></span> Kamu</div>
+          <div class="fp-person"><span class="fp-dot done" id="fp-you"></span> Dia</div>
+        </div>
+      </div>
+
+      <div class="sec-title">Misi Hari Ini <a href="#" onclick="switchTab('misi');return false;">Lihat semua</a></div>
+      <div class="card" id="today-missions">
+        <div class="mission-row" data-xp="10">
+          <button class="m-check" onclick="toggleMission(this)"><svg viewBox="0 0 12 12" fill="none" stroke-linecap="round"><path d="M2 6.5L4.5 9L10 3.5"/></svg></button>
+          <div class="m-body">
+            <div class="m-title">Sholat subuh berjamaah</div>
+            <div class="m-meta"><span class="m-who">Berdua</span><span class="m-xp">+10 XP</span></div>
+          </div>
+        </div>
+        <div class="mission-row" data-xp="25">
+          <button class="m-check" onclick="toggleMission(this)"><svg viewBox="0 0 12 12" fill="none" stroke-linecap="round"><path d="M2 6.5L4.5 9L10 3.5"/></svg></button>
+          <div class="m-body">
+            <div class="m-title">Beresin kamar</div>
+            <div class="m-meta"><span class="m-who">Kamu</span><span class="m-xp">+25 XP</span></div>
+          </div>
+        </div>
+        <div class="mission-row" data-xp="10">
+          <button class="m-check" onclick="toggleMission(this)"><svg viewBox="0 0 12 12" fill="none" stroke-linecap="round"><path d="M2 6.5L4.5 9L10 3.5"/></svg></button>
+          <div class="m-body">
+            <div class="m-title">Kabar-kabaran seharian</div>
+            <div class="m-meta"><span class="m-who">Berdua</span><span class="m-xp">+10 XP</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="sec-title">Agenda Terdekat</div>
+      <div class="card">
+        <div class="agenda-row">
+          <div class="a-date"><div class="d">27</div><div class="m">Okt</div></div>
+          <div class="a-info">
+            <div class="a-title">Nonton bareng</div>
+            <div class="a-sub">19.30 · Rumah</div>
+          </div>
+          <span class="cat-dot cat-kencan"></span>
+        </div>
+        <div class="agenda-row">
+          <div class="a-date"><div class="d">29</div><div class="m">Okt</div></div>
+          <div class="a-info">
+            <div class="a-title">Kajian rutin</div>
+            <div class="a-sub">16.00 · Masjid Agung</div>
+          </div>
+          <span class="cat-dot cat-ibadah"></span>
+        </div>
+        <div class="agenda-row">
+          <div class="a-date"><div class="d">02</div><div class="m">Nov</div></div>
+          <div class="a-info">
+            <div class="a-title">Anniversary bulanan</div>
+            <div class="a-sub">Ganjaran makan di luar</div>
+          </div>
+          <span class="cat-dot cat-spesial"></span>
+        </div>
+      </div>
+
+      <div class="sec-title">Kupon Aktif</div>
+      <div class="card" style="display:flex;align-items:center;gap:14px;">
+        <div class="coupon-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12v9H4v-9M2 7h20v5H2zM12 21V7M12 7H7.5a2.5 2.5 0 110-5C11 2 12 7 12 7zM12 7h4.5a2.5 2.5 0 100-5C13 2 12 7 12 7z"/></svg>
+        </div>
+        <div style="flex:1">
+          <div style="font-weight:800;font-size:14px;">1 kupon dimiliki</div>
+          <div style="font-size:12px;color:var(--ink-soft);margin-top:2px;">"Dipijitin 10 menit" — bisa dipakai kapan saja</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== AGENDA ========== -->
+    <div class="view" id="view-agenda">
+      <div class="cal-header">
+        <div class="cal-month" id="cal-month-label">Oktober 2026</div>
+        <div class="cal-nav">
+          <button onclick="toast('Prototype: bulan sebelumnya')">‹</button>
+          <button onclick="toast('Prototype: bulan berikutnya')">›</button>
+        </div>
+      </div>
+      <div class="card" style="padding:16px 14px;">
+        <div class="cal-grid" id="cal-dow-row">
+          <div class="cal-dow">Min</div><div class="cal-dow">Sen</div><div class="cal-dow">Sel</div>
+          <div class="cal-dow">Rab</div><div class="cal-dow">Kam</div><div class="cal-dow">Jum</div><div class="cal-dow">Sab</div>
+        </div>
+        <div class="cal-grid" id="cal-grid"></div>
+      </div>
+
+      <div class="legend">
+        <span><i class="cat-dot cat-kencan" style="width:8px;height:8px;border-radius:50%;display:inline-block"></i> Kencan</span>
+        <span><i style="background:var(--sage);width:8px;height:8px;border-radius:50%;display:inline-block"></i> Ibadah</span>
+        <span><i style="background:#8FA3B8;width:8px;height:8px;border-radius:50%;display:inline-block"></i> Kerja</span>
+        <span><i style="background:var(--amber);width:8px;height:8px;border-radius:50%;display:inline-block"></i> Spesial</span>
+      </div>
+
+      <div class="sec-title" id="agenda-list-title">Agenda — 27 Oktober</div>
+      <div class="card" id="agenda-day-list"></div>
+    </div>
+
+    <!-- ========== MISI ========== -->
+    <div class="view" id="view-misi">
+      <div class="card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+          <div style="font-weight:800;font-size:15px;">Leaderboard Minggu Ini</div>
+          <span class="chip" style="background:var(--bg);color:var(--ink-soft);">21–27 Okt</span>
+        </div>
+        <div class="lb-row">
+          <div class="lb-rank crown">1</div>
+          <div class="avatar you" style="margin:0;border:none;">D</div>
+          <div class="lb-name">Dia</div>
+          <div class="lb-xp" id="lb-you">185 <small>XP</small></div>
+        </div>
+        <div class="lb-row">
+          <div class="lb-rank">2</div>
+          <div class="avatar me" style="margin:0;border:none;">M</div>
+          <div class="lb-name">Kamu</div>
+          <div class="lb-xp" id="lb-me">160 <small>XP</small></div>
+        </div>
+        <div class="progress-track"><div class="progress-fill" id="lb-bar" style="width:53%"></div></div>
+        <div style="font-size:11.5px;color:var(--ink-soft);font-weight:600;margin-top:8px;text-align:center;">Selisih 25 XP — masih bisa disalip!</div>
+      </div>
+
+      <div class="sec-title">Semua Misi <a href="#" onclick="toast('Prototype: form tambah misi');return false;">+ Tambah</a></div>
+      <div class="card">
+        <div class="mission-row" data-xp="10">
+          <button class="m-check" onclick="toggleMission(this)"><svg viewBox="0 0 12 12" fill="none" stroke-linecap="round"><path d="M2 6.5L4.5 9L10 3.5"/></svg></button>
+          <div class="m-body">
+            <div class="m-title">Sholat subuh berjamaah</div>
+            <div class="m-meta"><span class="chip easy">Mudah</span><span class="m-xp">+10 XP</span><span class="m-who">Berdua</span></div>
+          </div>
+        </div>
+        <div class="mission-row" data-xp="25">
+          <button class="m-check" onclick="toggleMission(this)"><svg viewBox="0 0 12 12" fill="none" stroke-linecap="round"><path d="M2 6.5L4.5 9L10 3.5"/></svg></button>
+          <div class="m-body">
+            <div class="m-title">Beresin kamar</div>
+            <div class="m-meta"><span class="chip medium">Sedang</span><span class="m-xp">+25 XP</span><span class="m-who">Kamu</span></div>
+          </div>
+        </div>
+        <div class="mission-row" data-xp="50">
+          <button class="m-check" onclick="toggleMission(this)"><svg viewBox="0 0 12 12" fill="none" stroke-linecap="round"><path d="M2 6.5L4.5 9L10 3.5"/></svg></button>
+          <div class="m-body">
+            <div class="m-title">Masak bareng akhir pekan</div>
+            <div class="m-meta"><span class="chip hard">Sulit</span><span class="m-xp">+50 XP</span><span class="m-who">Berdua</span></div>
+          </div>
+        </div>
+        <div class="mission-row" data-xp="25">
+          <button class="m-check" onclick="toggleMission(this)"><svg viewBox="0 0 12 12" fill="none" stroke-linecap="round"><path d="M2 6.5L4.5 9L10 3.5"/></svg></button>
+          <div class="m-body">
+            <div class="m-title">Baca Al-Quran 1 halaman</div>
+            <div class="m-meta"><span class="chip medium">Sedang</span><span class="m-xp">+25 XP</span><span class="m-who">Bergantian</span></div>
+          </div>
+        </div>
+        <div class="mission-row" data-xp="10">
+          <button class="m-check" onclick="toggleMission(this)"><svg viewBox="0 0 12 12" fill="none" stroke-linecap="round"><path d="M2 6.5L4.5 9L10 3.5"/></svg></button>
+          <div class="m-body">
+            <div class="m-title">Olahraga 15 menit</div>
+            <div class="m-meta"><span class="chip easy">Mudah</span><span class="m-xp">+10 XP</span><span class="m-who">Kamu</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="sec-title">Riwayat Terkini</div>
+      <div class="card" style="font-size:13px;color:var(--ink-soft);">
+        <div style="display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--line);">
+          <span><b style="color:var(--ink)">Dia</b> menyelesaikan "Cuci piring"</span><span style="font-weight:800;color:#C08A1E">+25</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--line);">
+          <span><b style="color:var(--ink)">Kamu</b> menyelesaikan "Sholat subuh"</span><span style="font-weight:800;color:#C08A1E">+10</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding:9px 0;">
+          <span><b style="color:var(--ink)">Dia</b> menukarkan "Pilih tempat makan"</span><span style="font-weight:800;color:var(--terra)">−150</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== POIN ========== -->
+    <div class="view" id="view-poin">
+      <div class="xp-balance">
+        <div class="lbl">Saldo XP Kamu</div>
+        <div class="val" id="xp-total">160 <small>XP</small></div>
+        <div class="sub">Minggu ini: +85 XP · Peringkat 2 dari 2</div>
+      </div>
+
+      <div class="sec-title">Toko Kupon <a href="#" onclick="toast('Prototype: bikin kupon baru');return false;">+ Bikin kupon</a></div>
+
+      <div class="coupon">
+        <div class="coupon-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8h1a4 4 0 010 8h-1M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8zM6 1v3M10 1v3M14 1v3"/></svg>
+        </div>
+        <div class="coupon-body">
+          <div class="coupon-name">Dipijitin 10 menit</div>
+          <div class="coupon-desc">Ditukar oleh siapa saja, dilayani dengan ikhlas</div>
+        </div>
+        <button class="coupon-price" onclick="redeem(this, 100)">100 XP</button>
+      </div>
+
+      <div class="coupon">
+        <div class="coupon-icon" style="background:var(--amber-soft);">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#C08A1E" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 002-2V2M7 2v20M21 15V2l-4 4-3-3v13a3 3 0 003 3h7v-9h-3z"/></svg>
+        </div>
+        <div class="coupon-body">
+          <div class="coupon-name">Pilih tempat makan</div>
+          <div class="coupon-desc">Hak penuh menentukan restoran minggu ini</div>
+        </div>
+        <button class="coupon-price" onclick="redeem(this, 150)">150 XP</button>
+      </div>
+
+      <div class="coupon">
+        <div class="coupon-icon" style="background:var(--sage-soft);">
+          <svg viewBox="0 0 24 24" fill="none" stroke="var(--sage)" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>
+        </div>
+        <div class="coupon-body">
+          <div class="coupon-name">Bebas tugas rumah 1 hari</div>
+          <div class="coupon-desc">Semua chores jadi milik dia seharian</div>
+        </div>
+        <button class="coupon-price" onclick="redeem(this, 200)">200 XP</button>
+      </div>
+
+      <div class="coupon">
+        <div class="coupon-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16"/></svg>
+        </div>
+        <div class="coupon-body">
+          <div class="coupon-name">Movie night request</div>
+          <div class="coupon-desc">Pilih film apa pun tanpa protes</div>
+        </div>
+        <button class="coupon-price" onclick="redeem(this, 120)">120 XP</button>
+      </div>
+
+      <div class="sec-title">Riwayat Penukaran</div>
+      <div class="card" style="font-size:13px;color:var(--ink-soft);">
+        <div style="display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--line);">
+          <span><b style="color:var(--ink)">Dia</b> · Pilih tempat makan</span><span style="font-weight:800;color:var(--terra)">−150</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding:9px 0;">
+          <span><b style="color:var(--ink)">Kamu</b> · Dipijitin 10 menit</span><span style="font-weight:800;color:var(--terra)">−100</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== PROFIL ========== -->
+    <div class="view" id="view-profil">
+      <div class="profile-head">
+        <div class="profile-avatar">M</div>
+        <div class="profile-name">Miftah</div>
+        <div class="profile-since">Bersama sejak Oktober 2026</div>
+      </div>
+
+      <div class="stat-grid">
+        <div class="stat-box"><div class="v">42</div><div class="k">Misi selesai</div></div>
+        <div class="stat-box"><div class="v">12</div><div class="k">Streak saat ini</div></div>
+        <div class="stat-box"><div class="v">21</div><div class="k">Streak terpanjang</div></div>
+      </div>
+
+      <div class="sec-title">Badge Milestone</div>
+      <div class="badge-grid">
+        <div class="badge earned">
+          <svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2C8 7 6 10 6 14a6 6 0 0012 0c0-4-2-7-6-12z"/></svg>
+          7 Hari
+        </div>
+        <div class="badge earned">
+          <svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="6"/><path d="M15.5 13l1.5 8-5-3-5 3 1.5-8"/></svg>
+          30 Hari
+        </div>
+        <div class="badge locked">
+          <svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2.4 7.2H22l-6 4.8 2.4 7.2-6.4-4.8-6.4 4.8L8 14 2 9.2h7.6z"/></svg>
+          100 Hari
+        </div>
+        <div class="badge locked">
+          <svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 000-7.78z"/></svg>
+          1 Tahun
+        </div>
+      </div>
+
+      <div class="sec-title">Pengaturan</div>
+      <div class="card" style="font-size:14px;font-weight:600;">
+        <div style="display:flex;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--line);cursor:pointer;" onclick="toast('Prototype')">
+          <span>Profil pasangan</span><span style="color:var(--ink-faint)">›</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--line);cursor:pointer;" onclick="toast('Prototype')">
+          <span>Notifikasi pengingat</span><span style="color:var(--ink-faint)">›</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding:12px 0;cursor:pointer;" onclick="toast('Prototype')">
+          <span>Tema &amp; tampilan</span><span style="color:var(--ink-faint)">›</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- FAB (only on agenda view) -->
+  <button class="fab" id="fab" style="display:none;" onclick="toast('Prototype: form tambah agenda')">+</button>
+
+  <!-- Bottom nav -->
+  <nav class="bottom-nav">
+    <button class="nav-btn active" data-view="today" onclick="switchTab('today')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5L12 3l9 7.5M5 9.5V21h14V9.5"/></svg>
+      Hari Ini
+    </button>
+    <button class="nav-btn" data-view="agenda" onclick="switchTab('agenda')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+      Agenda
+    </button>
+    <button class="nav-btn" data-view="misi" onclick="switchTab('misi')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg>
+      Misi
+    </button>
+    <button class="nav-btn" data-view="poin" onclick="switchTab('poin')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12v9H4v-9M2 7h20v5H2zM12 21V7M12 7H7.5a2.5 2.5 0 110-5C11 2 12 7 12 7zM12 7h4.5a2.5 2.5 0 100-5C13 2 12 7 12 7z"/></svg>
+      Poin
+    </button>
+    <button class="nav-btn" data-view="profil" onclick="switchTab('profil')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      Profil
+    </button>
+  </nav>
+
+  <div class="toast" id="toast"></div>
+</div>
+
+<script>
+/* ============ Tab switching ============ */
+function switchTab(name) {
+  document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
+  document.querySelectorAll(".nav-btn").forEach(b => b.classList.remove("active"));
+  document.getElementById("view-" + name).classList.add("active");
+  document.querySelector(`.nav-btn[data-view="${name}"]`).classList.add("active");
+  document.getElementById("views").scrollTop = 0;
+  document.getElementById("fab").style.display = (name === "agenda") ? "flex" : "none";
+}
+
+/* ============ Toast ============ */
+let toastTimer;
+function toast(msg) {
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove("show"), 2000);
+}
+
+/* ============ Mission toggle + confetti + XP ============ */
+let myXP = 160;
+function toggleMission(btn) {
+  const row = btn.closest(".mission-row");
+  const wasDone = row.classList.toggle("done");
+  const xp = parseInt(row.dataset.xp || "0");
+
+  if (wasDone) {
+    myXP += xp;
+    confetti(btn);
+    document.getElementById("av-me").classList.add("active");
+    document.getElementById("fp-me").classList.add("done");
+    toast(`+${xp} XP — misi selesai!`);
+  } else {
+    myXP -= xp;
+  }
+  updateXP();
+}
+
+function updateXP() {
+  document.getElementById("xp-total").innerHTML = `${myXP} <small>XP</small>`;
+  document.getElementById("lb-me").innerHTML = `${myXP} <small>XP</small>`;
+  const you = 185;
+  const pct = Math.max(0, Math.min(100, Math.round(myXP / (myXP + you) * 100)));
+  document.getElementById("lb-bar").style.width = pct + "%";
+}
+
+function confetti(el) {
+  const phone = document.querySelector(".phone");
+  const pr = phone.getBoundingClientRect();
+  const r = el.getBoundingClientRect();
+  const colors = ["#E2725B", "#F5A623", "#7D9B76", "#8FA3B8", "#FFD98A"];
+  for (let i = 0; i < 22; i++) {
+    const c = document.createElement("div");
+    c.className = "confetti";
+    c.style.background = colors[Math.floor(Math.random() * colors.length)];
+    c.style.left = (r.left - pr.left + r.width / 2) + "px";
+    c.style.top = (r.top - pr.top + r.height / 2) + "px";
+    phone.appendChild(c);
+    const angle = Math.random() * Math.PI * 2;
+    const dist = 50 + Math.random() * 90;
+    const dx = Math.cos(angle) * dist;
+    const dy = Math.sin(angle) * dist - 40;
+    c.animate([
+      { transform: "translate(0,0) rotate(0deg) scale(1)", opacity: 1 },
+      { transform: `translate(${dx}px, ${dy + 80}px) rotate(${Math.random() * 540}deg) scale(0.4)`, opacity: 0 }
+    ], { duration: 700 + Math.random() * 500, easing: "cubic-bezier(0.2, 0.6, 0.4, 1)" })
+     .onfinish = () => c.remove();
+  }
+}
+
+/* ============ Coupon redeem ============ */
+function redeem(btn, price) {
+  if (myXP < price) { toast("XP belum cukup, selesaikan misi dulu!"); return; }
+  myXP -= price;
+  updateXP();
+  btn.disabled = true;
+  btn.textContent = "Ditukar";
+  confetti(btn);
+  toast(`Kupon ditukar! −${price} XP`);
+}
+
+/* ============ Calendar ============ */
+const AGENDA = {
+  "2026-10-24": [{ t: "Kajian rutin", s: "16.00 · Masjid Agung", c: "ibadah" }],
+  "2026-10-27": [{ t: "Nonton bareng", s: "19.30 · Rumah", c: "kencan" }, { t: "Deadline proyek client", s: "Sebelum jam 12 siang", c: "kerja" }],
+  "2026-10-29": [{ t: "Kajian rutin", s: "16.00 · Masjid Agung", c: "ibadah" }],
+  "2026-10-31": [{ t: "Jalan sore ke alun-alun", s: "16.30 · Alun-alun utara", c: "kencan" }],
+  "2026-11-02": [{ t: "Anniversary bulanan", s: "Makan di luar — dia yang pilih", c: "spesial" }],
+};
+const MONTHS = ["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
+const CAT_CLASS = { kencan: "cat-kencan", ibadah: "cat-ibadah", kerja: "cat-kerja", spesial: "cat-spesial" };
+const CAT_COLOR = { kencan: "var(--terra)", ibadah: "var(--sage)", kerja: "#8FA3B8", spesial: "var(--amber)" };
+
+let selectedDate = "2026-10-27";
+
+function buildCalendar() {
+  const grid = document.getElementById("cal-grid");
+  grid.innerHTML = "";
+  const first = new Date(2026, 9, 1); // Oktober 2026
+  const startDay = first.getDay();
+  const daysInMonth = 31;
+
+  for (let i = 0; i < startDay; i++) {
+    const e = document.createElement("button");
+    e.className = "cal-day empty";
+    grid.appendChild(e);
+  }
+  for (let d = 1; d <= daysInMonth; d++) {
+    const key = `2026-10-${String(d).padStart(2, "0")}`;
+    const btn = document.createElement("button");
+    btn.className = "cal-day";
+    if (d === 27) btn.classList.add("today");
+    if (key === selectedDate) btn.classList.add("selected");
+    btn.innerHTML = `<span>${d}</span>`;
+    const items = AGENDA[key];
+    if (items) {
+      const dots = document.createElement("div");
+      dots.className = "cal-dots";
+      items.slice(0, 3).forEach(it => {
+        const i = document.createElement("i");
+        i.style.background = CAT_COLOR[it.c];
+        dots.appendChild(i);
+      });
+      btn.appendChild(dots);
+    }
+    btn.onclick = () => { selectedDate = key; buildCalendar(); renderDayList(); };
+    grid.appendChild(btn);
+  }
+}
+
+function renderDayList() {
+  const label = document.getElementById("agenda-list-title");
+  const list = document.getElementById("agenda-day-list");
+  const dt = new Date(selectedDate + "T00:00:00");
+  label.textContent = `Agenda — ${dt.getDate()} ${MONTHS[dt.getMonth()]}`;
+  const items = AGENDA[selectedDate];
+  if (!items || !items.length) {
+    list.innerHTML = `
+      <div class="empty-state">
+        <svg viewBox="0 0 64 64" fill="none" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="8" y="14" width="48" height="42" rx="6"/>
+          <path d="M8 26h48M20 8v10M44 8v10"/>
+          <path d="M24 38h6M34 38h6M24 46h6M34 46h6" opacity="0.5"/>
+        </svg>
+        <p>Belum ada agenda di tanggal ini.<br>Ketuk + untuk menambahkan rencana berdua.</p>
+      </div>`;
+    return;
+  }
+  list.innerHTML = items.map(it => `
+    <div class="agenda-row" style="border-bottom:1px solid var(--line);">
+      <span class="cat-dot ${CAT_CLASS[it.c]}"></span>
+      <div class="a-info">
+        <div class="a-title">${it.t}</div>
+        <div class="a-sub">${it.s}</div>
+      </div>
+    </div>`).join("");
+}
+
+buildCalendar();
+renderDayList();
+</script>
+</body>
+</html>
