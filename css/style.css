@@ -337,8 +337,9 @@ body {
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  gap: 6px;
-  margin-bottom: 14px;
+  gap: 4px;
+  margin-bottom: 10px;
+  min-height: 130px;
 }
 
 .flame-mascot {
@@ -364,23 +365,78 @@ body {
 .flame-wrap {
   position: relative;
   width: 92px;
-  height: 104px;
+  height: 124px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
 }
 
 .flame-glow {
   position: absolute;
   inset: -20px;
-  background: radial-gradient(circle, rgba(245,166,35,0.3) 0%, transparent 65%);
+  background: radial-gradient(circle, rgba(245,120,35,0.35) 0%, transparent 65%);
   animation: glowPulse 2.4s ease-in-out infinite;
+  z-index: 0;
 }
 
 @keyframes glowPulse {
   0%, 100% { opacity: 0.7; transform: scale(1); }
-  50% { opacity: 1; transform: scale(1.12); }
+  50% { opacity: 1; transform: scale(1.18); }
 }
 
+/* ===== Lidah api di belakang karakter ===== */
+.fire-tongues {
+  position: absolute;
+  bottom: -2px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 86px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 3px;
+  z-index: 0;
+}
+
+.fire-tongue {
+  border-radius: 50% 50% 30% 30% / 55% 55% 45% 45%;
+  transform-origin: bottom center;
+}
+
+.fire-tongue.ft-c {
+  width: 30px;
+  height: 62px;
+  background: linear-gradient(to top, #FF6B1A 0%, #F5A623 50%, #FFE87A 100%);
+  animation: tongueRise 1.25s ease-in-out infinite;
+}
+
+.fire-tongue.ft-l {
+  width: 20px;
+  height: 44px;
+  background: linear-gradient(to top, #E2725B 0%, #F5A623 55%, #FFE066 100%);
+  animation: tongueRise 1.55s ease-in-out infinite 0.12s;
+}
+
+.fire-tongue.ft-r {
+  width: 20px;
+  height: 42px;
+  background: linear-gradient(to top, #E2725B 0%, #F5A623 55%, #FFD98A 100%);
+  animation: tongueRise 1.45s ease-in-out infinite 0.28s;
+}
+
+@keyframes tongueRise {
+  0%   { transform: scaleY(1)    rotate(0deg);   opacity: 0.88; }
+  25%  { transform: scaleY(1.09) rotate(-2deg);  opacity: 1;    }
+  50%  { transform: scaleY(0.93) rotate(1.5deg); opacity: 0.82; }
+  75%  { transform: scaleY(1.07) rotate(-1deg);  opacity: 1;    }
+  100% { transform: scaleY(1)    rotate(0deg);   opacity: 0.88; }
+}
+
+/* Karakter api di atas lidah api */
 .flame-svg {
   position: relative;
+  z-index: 1;
   width: 92px;
   height: 104px;
   animation: flicker 1.6s ease-in-out infinite;
