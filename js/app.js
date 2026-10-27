@@ -7,6 +7,7 @@ import { showToast } from './fx.js';
 import { isSupabaseConfigured } from './supabaseClient.js';
 import { initAgenda } from './agenda.js';
 import { initMisi } from './misi.js';
+import { initStreak } from './streak.js';
 
 // State Global Aplikasi
 export const state = {
@@ -107,7 +108,10 @@ async function init() {
   // 5. Inisialisasi Fitur Misi & XP (Fase 3)
   await initMisi();
 
-  // 6. Global Backdrop Sheet Close Handler
+  // 6. Inisialisasi Fitur Streak & Leaderboard (Fase 4)
+  await initStreak();
+
+  // 7. Global Backdrop Sheet Close Handler
   const backdrop = document.getElementById('sheetBackdrop');
   if (backdrop) {
     backdrop.addEventListener('click', () => {

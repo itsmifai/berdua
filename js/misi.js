@@ -6,6 +6,7 @@ import { supabase, isSupabaseConfigured } from './supabaseClient.js';
 import { state } from './app.js';
 import { showToast, launchConfetti, hopElement } from './fx.js';
 import { formatDateKey } from './agenda.js';
+import { loadStreakData, loadWeeklyLeaderboard } from './streak.js';
 
 export const DIFFICULTY_XP = {
   easy: 10,
@@ -329,6 +330,8 @@ export async function toggleMission(missionId, checkBtn) {
   updateHeaderActiveTicks();
   renderTodayMissions();
   renderAllMissions();
+  await loadStreakData();
+  await loadWeeklyLeaderboard();
 }
 
 /**
