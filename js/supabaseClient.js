@@ -20,10 +20,12 @@ export const SUPABASE_ANON_KEY =
   DEFAULT_SUPABASE_ANON_KEY;
 
 export const isSupabaseConfigured = () => {
-  return SUPABASE_URL && 
+  const ok = SUPABASE_URL && 
     SUPABASE_URL !== 'https://YOUR_PROJECT_ID.supabase.co' && 
     SUPABASE_ANON_KEY && 
     SUPABASE_ANON_KEY !== 'YOUR_ANON_KEY';
+  console.log('[Supabase] isConfigured:', ok, '| URL:', SUPABASE_URL?.substring(0, 40));
+  return ok;
 };
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {

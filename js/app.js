@@ -85,63 +85,73 @@ document.querySelectorAll('.nav-btn').forEach(btn => {
    APP INITIALIZATION
    ============================================================================== */
 async function init() {
-  // 1. Validasi konfigurasi Supabase
-  if (!isSupabaseConfigured()) {
-    showToast('Kredensial Supabase belum diisi di supabaseClient.js');
-    console.warn('Isi SUPABASE_URL & SUPABASE_ANON_KEY di js/supabaseClient.js');
-    return;
-  }
+  try {
+    // 1. Validasi konfigurasi Supabase
+    if (!isSupabaseConfigured()) {
+      console.error('Supabase belum dikonfigurasi!');
+      showToast('Konfigurasi Supabase belum diisi');
+      return;
+    }
 
-  // 2. Session guard
-  const session = await requireAuth();
-  if (!session) return;
-  state.session = session;
+    // 2. Session guard — jika belum login, redirect ke login.html
+    const session = await requireAuth();
+    if (!session) return; // requireAuth sudah handle redirect
+    state.session = session;
 
-  // 3. Ambil data profil user
-  const profile = await getCurrentProfile();
-  if (profile) {
+    // 3. Ambil data profil user + partner
+    const profile = await getCurrentProfile();
+    if (!profile || !profile.couple_id) {
+      // Sudah auth tapi belum punya profil/couple — arahkan ke login
+      console.error('Profil atau couple_id tidak ditemukan. Pastikan seed sudah dijalankan.');
+      showToast('Data profil tidak ditemukan. Hubungi admin.');
+      setTimeout(() => { window.location.href = 'login.html'; }, 2000);
+      return;
+    }
+
     state.profile = profile;
+    state.partner = profile.partner || null;
     renderUserHeader(profile);
-  }
 
-  // 4. Inisialisasi Fitur Agenda (Fase 2)
-  await initAgenda();
+    // 4. Inisialisasi semua fitur secara paralel untuk performa
+    await Promise.all([
+      initAgenda(),
+      initMisi(),
+    ]);
 
-  // 5. Inisialisasi Fitur Misi & XP (Fase 3)
-  await initMisi();
+    await Promise.all([
+      initStreak(),
+      initPoin(),
+      initProfil(),
+    ]);
 
-  // 6. Inisialisasi Fitur Streak & Leaderboard (Fase 4)
-  await initStreak();
+    // 5. Aktifkan Realtime Sync (Fase 6)
+    setupRealtimeSubscriptions();
 
-  // 7. Inisialisasi Fitur Kupon & Poin (Fase 5)
-  await initPoin();
+    // 6. Registrasi Service Worker PWA (Fase 6)
+    registerPwaServiceWorker();
 
-  // 8. Inisialisasi Fitur Profil & Statistik (Fase 5)
-  await initProfil();
+    // 7. Global Backdrop Sheet Close Handler
+    const backdrop = document.getElementById('sheetBackdrop');
+    if (backdrop) {
+      backdrop.addEventListener('click', () => {
+        document.querySelectorAll('.bottom-sheet').forEach(sheet => sheet.classList.remove('active'));
+        backdrop.classList.remove('active');
+      });
+    }
 
-  // 9. Aktifkan Supabase Realtime Sinkronisasi Dua Arah (Fase 6)
-  setupRealtimeSubscriptions();
+    // 8. Hook logout button
+    const btnLogout = document.getElementById('btnLogout');
+    if (btnLogout) {
+      btnLogout.addEventListener('click', async () => {
+        if (confirm('Yakin ingin keluar dari akun?')) {
+          await logout();
+        }
+      });
+    }
 
-  // 10. Registrasi Service Worker PWA (Fase 6)
-  registerPwaServiceWorker();
-
-  // 11. Global Backdrop Sheet Close Handler
-  const backdrop = document.getElementById('sheetBackdrop');
-  if (backdrop) {
-    backdrop.addEventListener('click', () => {
-      document.querySelectorAll('.bottom-sheet').forEach(sheet => sheet.classList.remove('active'));
-      backdrop.classList.remove('active');
-    });
-  }
-
-  // 7. Hook logout button
-  const btnLogout = document.getElementById('btnLogout');
-  if (btnLogout) {
-    btnLogout.addEventListener('click', async () => {
-      if (confirm('Yakin ingin keluar dari akun?')) {
-        await logout();
-      }
-    });
+  } catch (err) {
+    console.error('Error saat init app:', err);
+    showToast('Gagal memuat aplikasi. Coba refresh halaman.');
   }
 }
 

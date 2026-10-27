@@ -105,9 +105,11 @@ export async function sendPasswordReset(email) {
  */
 export async function requireAuth() {
   if (!isSupabaseConfigured()) {
+    console.error('[Auth] Supabase belum dikonfigurasi!');
     return null;
   }
   const session = await getSession();
+  console.log('[Auth] Session:', session ? `Ada (${session.user?.email})` : 'Tidak ada');
   if (!session) {
     window.location.href = 'login.html';
     return null;
@@ -123,6 +125,7 @@ export async function redirectIfAuth() {
     return false;
   }
   const session = await getSession();
+  console.log('[Auth] redirectIfAuth - Session:', session ? `Ada (${session.user?.email})` : 'Tidak ada');
   if (session) {
     window.location.href = 'index.html';
     return true;
