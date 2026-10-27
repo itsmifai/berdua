@@ -6,7 +6,7 @@ import { requireAuth, getCurrentProfile, logout } from './auth.js';
 import { showToast, showConfirmModal } from './fx.js';
 import { supabase, isSupabaseConfigured } from './supabaseClient.js';
 import { initAgenda, loadAgendaEvents, renderCalendar, renderDayList, renderUpcomingAgenda, loadCategories, renderCategoryChips } from './agenda.js';
-import { initMisi, loadMissionsData, renderTodayMissions, renderAllMissions, updateHeaderActiveTicks, applyRemoteMissionToggle } from './misi.js';
+import { initMisi, loadMissionsData, renderTodayMissions, renderAllMissions, updateHeaderActiveTicks, applyRemoteMissionToggle, updateXpDisplays } from './misi.js';
 import { initStreak, loadStreakData, loadWeeklyLeaderboard, renderWeeklyDuel } from './streak.js';
 import { initPoin, loadCouponsData, renderCoupons, renderGiftStrip, renderRedemptions } from './poin.js';
 import { initProfil, loadProfilStats } from './profil.js';
@@ -198,6 +198,18 @@ export function renderUserHeader(profile) {
 let activeRealtimeChannel = null;
 
 /**
+ * Guard window: setelah optimistic update, tahan profile.xp_balance dari DB selama N ms
+ * agar Realtime echo-back tidak rollback nilai optimistic yang sudah benar.
+ */
+let _xpLockUntil = 0;
+export function lockXpFor(ms = 3000) {
+  _xpLockUntil = Date.now() + ms;
+}
+export function isXpLocked() {
+  return Date.now() < _xpLockUntil;
+}
+
+/**
  * Kirim event sinkronisasi instan via WebSocket Broadcast (sub-50ms latency)
  */
 export function broadcastLiveSync(type, payload = {}) {
@@ -294,16 +306,20 @@ export function setupRealtimeSubscriptions() {
     // 2. POSTGRES CHANGES (Reliable Persistence & Fallback)
     // Filter couple_id dilepas agar event DELETE tidak di-drop saat replica identity default
     .on('postgres_changes', { event: '*', schema: 'public', table: 'mission_completions' }, async () => {
+      // Jalankan load data misi, streak & leaderboard secara paralel
+      // JANGAN load profile di sini – profile XP dihandle oleh 'profiles' realtime
+      // agar tidak terjadi stale-read yang menyebabkan flicker angka XP
       await Promise.allSettled([
         loadMissionsData(),
         loadStreakData(),
-        loadWeeklyLeaderboard(),
-        loadProfilStats()
+        loadWeeklyLeaderboard()
       ]);
       renderTodayMissions();
       renderAllMissions();
       renderWeeklyDuel();
       updateHeaderActiveTicks();
+      // Hanya muat profil stats (level/julukan) – tidak ubah xp_balance
+      loadProfilStats();
     })
     .on('postgres_changes', { event: '*', schema: 'public', table: 'agenda_events' }, async () => {
       await loadAgendaEvents();
@@ -334,8 +350,18 @@ export function setupRealtimeSubscriptions() {
     })
     .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, async (payload) => {
       if (payload.new?.id === state.profile?.id) {
-        state.profile = { ...state.profile, ...payload.new };
+        // XP Lock guard: kalau optimistic update masih aktif, pertahankan nilai optimistic
+        // dan hanya terima update non-XP (nama, dll). Ini mencegah "balik ke angka lama"
+        // saat Realtime echo datang lebih cepat dari DB trigger selesai.
+        const incomingXp = payload.new?.xp_balance ?? state.profile.xp_balance;
+        const mergedProfile = { ...state.profile, ...payload.new };
+        if (isXpLocked()) {
+          // Hanya terima jika DB sudah menunjukkan nilai ≥ optimistic kita (sudah settled)
+          mergedProfile.xp_balance = Math.max(incomingXp, state.profile.xp_balance);
+        }
+        state.profile = mergedProfile;
         renderUserHeader(state.profile);
+        updateXpDisplays();
       } else if (state.partner && payload.new?.id === state.partner?.id) {
         state.partner = { ...state.partner, ...payload.new };
         renderUserHeader(state.profile);

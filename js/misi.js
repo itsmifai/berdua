@@ -3,7 +3,7 @@
 // ==============================================================================
 
 import { supabase, isSupabaseConfigured } from './supabaseClient.js';
-import { state, broadcastLiveSync, renderUserHeader } from './app.js';
+import { state, broadcastLiveSync, renderUserHeader, lockXpFor } from './app.js';
 import { showToast, launchConfetti, hopElement, showConfirmModal } from './fx.js';
 import { formatDateKey } from './agenda.js';
 import { streakState, renderWeeklyDuel, renderStreakCard, loadStreakData, loadWeeklyLeaderboard } from './streak.js';
@@ -285,6 +285,9 @@ export async function toggleMission(missionId, checkBtn) {
     state.profile.xp_balance = Math.max(0, prevXp - xp);
     streakState.myWeekXp = Math.max(0, prevWeekXp - xp);
 
+    // Kunci XP selama 4 detik agar Realtime echo tidak balikkan nilai optimistic
+    lockXpFor(4000);
+
     // Refresh UI seketika
     updateXpDisplays();
     renderTodayMissions();
@@ -342,6 +345,9 @@ export async function toggleMission(missionId, checkBtn) {
     todayCompletions.push(optimisticCompletion);
     state.profile.xp_balance = prevXp + xp;
     streakState.myWeekXp = prevWeekXp + xp;
+
+    // Kunci XP selama 4 detik agar Realtime echo tidak balikkan nilai optimistic
+    lockXpFor(4000);
 
     // Refresh UI seketika
     updateXpDisplays();

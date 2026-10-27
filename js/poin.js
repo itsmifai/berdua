@@ -3,7 +3,7 @@
 // ==============================================================================
 
 import { supabase, isSupabaseConfigured } from './supabaseClient.js';
-import { state, broadcastLiveSync } from './app.js';
+import { state, broadcastLiveSync, lockXpFor } from './app.js';
 import { showToast, launchConfetti, shakeElement, showConfirmModal } from './fx.js';
 import { updateXpDisplays } from './misi.js';
 
@@ -182,6 +182,9 @@ export async function handleRedeemCoupon(coupon, btn) {
   } else {
     state.profile.xp_balance = data.remaining_xp;
   }
+
+  // Lock XP agar Realtime echo tidak override nilai yang baru saja dikurangi
+  lockXpFor(4000);
 
   btn.disabled = false;
   btn.textContent = `${coupon.price_xp} XP`;
