@@ -541,6 +541,7 @@
     <div class="sheet-handle"></div>
     <div class="sheet-title" id="sheetCouponTitle">Bikin Kupon Hadiah</div>
     <form id="formCoupon">
+      <input type="hidden" id="couponId">
       <input type="hidden" id="couponIconKey" value="gift">
 
       <div class="form-group">
@@ -572,6 +573,7 @@
       </div>
 
       <button type="submit" class="btn-primary" id="btnSaveCoupon">Bikin Kupon</button>
+      <button type="button" class="btn-secondary" id="btnDeleteCoupon" style="display:none; color:var(--terra); margin-top:10px;">Hapus Kupon</button>
     </form>
   </div>
 
@@ -592,6 +594,6 @@
     splashEl.addEventListener("click", dismissSplash);
   }
 </script>
-<script type="module" src="js/app.js?v=7"></script>
+<script type="module" src="js/app.js?v=8"></script>
 </body>
 </html>

@@ -173,6 +173,77 @@ export function showAlertModal({
   });
 }
 
+/**
+ * Menampilkan modal input prompt custom in-app (menggantikan window.prompt)
+ * @returns {Promise<string|null>} Resolves string input jika user simpan, null jika batal
+ */
+export function showPromptModal({
+  title = 'Ubah Teks',
+  message = '',
+  defaultValue = '',
+  placeholder = '',
+  confirmText = 'Simpan',
+  cancelText = 'Batal'
+} = {}) {
+  return new Promise((resolve) => {
+    document.querySelectorAll('.modal-backdrop').forEach(m => m.remove());
+
+    const backdrop = document.createElement('div');
+    backdrop.className = 'modal-backdrop';
+
+    backdrop.innerHTML = `
+      <div class="modal-card">
+        <div class="modal-title">${escapeModalText(title)}</div>
+        ${message ? `<div class="modal-message" style="margin-bottom:14px;">${escapeModalText(message)}</div>` : ''}
+        <input type="text" id="modalInputPrompt" class="form-input" style="margin-bottom:20px; font-size:15px; text-align:center;" value="${escapeModalText(defaultValue)}" placeholder="${escapeModalText(placeholder)}" maxlength="30">
+        <div class="modal-actions">
+          <button type="button" class="modal-btn-cancel">${escapeModalText(cancelText)}</button>
+          <button type="button" class="modal-btn-confirm">${escapeModalText(confirmText)}</button>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(backdrop);
+    requestAnimationFrame(() => {
+      backdrop.classList.add('active');
+      const input = backdrop.querySelector('#modalInputPrompt');
+      if (input) {
+        input.focus();
+        input.select();
+      }
+    });
+
+    const cleanup = (val) => {
+      backdrop.classList.remove('active');
+      setTimeout(() => backdrop.remove(), 250);
+      resolve(val);
+    };
+
+    const confirmBtn = backdrop.querySelector('.modal-btn-confirm');
+    const inputEl = backdrop.querySelector('#modalInputPrompt');
+
+    const handleConfirm = () => {
+      const val = inputEl?.value.trim() || '';
+      cleanup(val);
+    };
+
+    confirmBtn.addEventListener('click', handleConfirm);
+    inputEl.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        handleConfirm();
+      } else if (e.key === 'Escape') {
+        cleanup(null);
+      }
+    });
+
+    backdrop.querySelector('.modal-btn-cancel').addEventListener('click', () => cleanup(null));
+    backdrop.addEventListener('click', (e) => {
+      if (e.target === backdrop) cleanup(null);
+    });
+  });
+}
+
 function escapeModalText(text) {
   if (!text) return '';
   const d = document.createElement('div');

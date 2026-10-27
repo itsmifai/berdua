@@ -943,11 +943,13 @@ body {
 
 .crown-svg {
   position: absolute;
-  top: -16px;
+  top: -25px;
   left: 50%;
   transform: translateX(-50%) rotate(-8deg);
-  width: 26px;
-  height: 26px;
+  width: 28px;
+  height: 28px;
+  z-index: 5;
+  filter: drop-shadow(0 2px 4px rgba(245, 166, 35, 0.4));
 }
 
 .vs-name {

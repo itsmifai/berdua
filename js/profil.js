@@ -4,7 +4,7 @@
 
 import { supabase, isSupabaseConfigured } from './supabaseClient.js';
 import { state, renderUserHeader } from './app.js';
-import { showToast } from './fx.js';
+import { showToast, showPromptModal } from './fx.js';
 
 /**
  * Inisialisasi modul Profil
@@ -68,7 +68,14 @@ function setupProfilDomEvents() {
   if (btnEditName) {
     btnEditName.addEventListener('click', async () => {
       const currentName = state.profile?.display_name || '';
-      const newName = prompt('Masukkan nama tampilan baru:', currentName);
+      const newName = await showPromptModal({
+        title: 'Ubah Nama Panggilan',
+        message: 'Nama ini yang akan dilihat oleh pasanganmu di aplikasi:',
+        defaultValue: currentName,
+        placeholder: 'Ketik nama panggilan baru',
+        confirmText: 'Simpan',
+        cancelText: 'Batal'
+      });
       if (!newName || newName.trim() === '' || newName.trim() === currentName) return;
 
       const { error } = await supabase
@@ -84,7 +91,7 @@ function setupProfilDomEvents() {
 
       state.profile.display_name = newName.trim();
       renderUserHeader(state.profile);
-      showToast('Nama tampilan berhasil diubah');
+      showToast('Nama panggilan berhasil diperbarui!');
     });
   }
 }

@@ -261,7 +261,7 @@ export function renderAllMissions() {
 }
 
 /**
- * Centang atau Batal Centang Misi
+ * Centang atau Batal Centang Misi (Optimistic UI Update - 0ms Delay)
  */
 export async function toggleMission(missionId, checkBtn) {
   const myId = state.profile?.id;
@@ -275,31 +275,77 @@ export async function toggleMission(missionId, checkBtn) {
   const xp = DIFFICULTY_XP[mission.difficulty] || 10;
 
   if (existingCompletion) {
-    // BATAL SELESAI: Delete completion
-    checkBtn.disabled = true;
-    const { error } = await supabase
-      .from('mission_completions')
-      .delete()
-      .eq('id', existingCompletion.id);
+    // === OPTIMISTIC ROLLBACK (BATAL CENTANG) ===
+    // 1. Eksekusi instan di memori (0ms delay)
+    const prevCompletions = [...todayCompletions];
+    const prevXp = state.profile.xp_balance || 0;
 
-    checkBtn.disabled = false;
-
-    if (error) {
-      console.error('Error delete completion:', error);
-      showToast('Gagal membatalkan misi');
-      return;
-    }
-
-    // Update state lokal
     todayCompletions = todayCompletions.filter(c => c.id !== existingCompletion.id);
-    state.profile.xp_balance = Math.max(0, (state.profile.xp_balance || 0) - xp);
+    state.profile.xp_balance = Math.max(0, prevXp - xp);
+
+    // Refresh UI seketika
     updateXpDisplays();
+    renderTodayMissions();
+    renderAllMissions();
+    updateHeaderActiveTicks();
     showToast('Batal selesai — XP disesuaikan');
 
+    // 2. Kirim update ke DB di latar belakang
+    supabase
+      .from('mission_completions')
+      .delete()
+      .eq('id', existingCompletion.id)
+      .then(({ error }) => {
+        if (error) {
+          console.error('Error delete completion:', error);
+          // Kembalikan state jika gagal di server
+          todayCompletions = prevCompletions;
+          state.profile.xp_balance = prevXp;
+          updateXpDisplays();
+          renderTodayMissions();
+          renderAllMissions();
+          updateHeaderActiveTicks();
+          showToast('Gagal membatalkan misi di server');
+        } else {
+          loadStreakData();
+          loadWeeklyLeaderboard();
+        }
+      });
+
   } else {
-    // SELESAIKAN MISI: Insert completion
-    checkBtn.disabled = true;
-    const { data, error } = await supabase
+    // === OPTIMISTIC COMPLETE (CENTANG SELESAI) ===
+    // 1. Eksekusi instan di memori (0ms delay)
+    const tempId = 'temp-' + Date.now();
+    const optimisticCompletion = {
+      id: tempId,
+      couple_id: state.profile.couple_id,
+      mission_id: missionId,
+      user_id: myId,
+      xp_awarded: xp,
+      completed_on: todayStr
+    };
+
+    const prevCompletions = [...todayCompletions];
+    const prevXp = state.profile.xp_balance || 0;
+
+    todayCompletions.push(optimisticCompletion);
+    state.profile.xp_balance = prevXp + xp;
+
+    // Refresh UI seketika
+    updateXpDisplays();
+    renderTodayMissions();
+    renderAllMissions();
+    updateHeaderActiveTicks();
+
+    // Animasi Confetti, Hop, & Cheers Toast INSTAN!
+    launchConfetti(checkBtn);
+    const avMe = document.getElementById('av-me');
+    hopElement(avMe);
+    const randomCheer = CHEERS[Math.floor(Math.random() * CHEERS.length)];
+    showToast(`+${xp} XP — ${randomCheer}`);
+
+    // 2. Kirim insert ke DB di latar belakang
+    supabase
       .from('mission_completions')
       .insert({
         couple_id: state.profile.couple_id,
@@ -309,35 +355,26 @@ export async function toggleMission(missionId, checkBtn) {
         completed_on: todayStr
       })
       .select()
-      .single();
-
-    checkBtn.disabled = false;
-
-    if (error) {
-      console.error('Error insert completion:', error);
-      showToast('Gagal menyelesaikan misi');
-      return;
-    }
-
-    // Update state lokal
-    todayCompletions.push(data);
-    state.profile.xp_balance = (state.profile.xp_balance || 0) + xp;
-    updateXpDisplays();
-
-    // Animasi Confetti, Hop, & Cheers Toast
-    launchConfetti(checkBtn);
-    const avMe = document.getElementById('av-me');
-    hopElement(avMe);
-
-    const randomCheer = CHEERS[Math.floor(Math.random() * CHEERS.length)];
-    showToast(`+${xp} XP — ${randomCheer}`);
+      .single()
+      .then(({ data, error }) => {
+        if (error) {
+          console.error('Error insert completion:', error);
+          // Kembalikan state jika gagal
+          todayCompletions = prevCompletions;
+          state.profile.xp_balance = prevXp;
+          updateXpDisplays();
+          renderTodayMissions();
+          renderAllMissions();
+          updateHeaderActiveTicks();
+          showToast('Gagal mencatat misi di server');
+        } else if (data) {
+          const idx = todayCompletions.findIndex(c => c.id === tempId);
+          if (idx !== -1) todayCompletions[idx] = data;
+          loadStreakData();
+          loadWeeklyLeaderboard();
+        }
+      });
   }
-
-  updateHeaderActiveTicks();
-  renderTodayMissions();
-  renderAllMissions();
-  await loadStreakData();
-  await loadWeeklyLeaderboard();
 }
 
 /**

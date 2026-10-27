@@ -91,12 +91,13 @@ export function renderCoupons() {
     const iconSvg = COUPON_ICONS[c.icon_key] || COUPON_ICONS.gift;
 
     return `
-      <div class="coupon" data-id="${c.id}">
+      <div class="coupon" data-id="${c.id}" style="cursor:pointer;">
         <div class="coupon-icon">
           ${iconSvg}
         </div>
         <div class="coupon-body">
           <div class="coupon-name">${escapeHtml(c.name)}</div>
+          <div style="font-size:11px; color:var(--ink-soft); font-weight:600; margin-top:2px;">Ketuk untuk edit/hapus</div>
         </div>
         <button type="button" class="coupon-price" data-id="${c.id}" data-price="${c.price_xp}">
           ${c.price_xp} XP
@@ -105,9 +106,20 @@ export function renderCoupons() {
     `;
   }).join('');
 
+  // Klik card untuk edit/hapus kupon
+  container.querySelectorAll('.coupon').forEach(card => {
+    card.addEventListener('click', (e) => {
+      if (e.target.closest('.coupon-price')) return;
+      const couponId = card.dataset.id;
+      const c = coupons.find(x => x.id === couponId);
+      if (c) openCouponSheet(c);
+    });
+  });
+
   // Tautkan tombol redeem pada tiap kupon
   container.querySelectorAll('.coupon-price').forEach(btn => {
-    btn.addEventListener('click', () => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
       const couponId = btn.dataset.id;
       const c = coupons.find(x => x.id === couponId);
       if (c) handleRedeemCoupon(c, btn);
@@ -251,19 +263,44 @@ function setupCouponDomEvents() {
 }
 
 /**
- * Membuka Bottom Sheet Bikin Kupon
+ * Membuka Bottom Sheet Bikin / Edit Kupon
  */
-export function openCouponSheet() {
+export function openCouponSheet(existingCoupon = null) {
   const sheet = document.getElementById('sheetCoupon');
   const backdrop = document.getElementById('sheetBackdrop');
   if (!sheet || !backdrop) return;
 
-  document.getElementById('couponName').value = '';
-  document.getElementById('couponPrice').value = '100';
-  document.getElementById('couponIconKey').value = 'gift';
+  const titleEl = document.getElementById('sheetCouponTitle');
+  const idInput = document.getElementById('couponId');
+  const nameInput = document.getElementById('couponName');
+  const priceInput = document.getElementById('couponPrice');
+  const iconInput = document.getElementById('couponIconKey');
+  const btnSave = document.getElementById('btnSaveCoupon');
+  const btnDelete = document.getElementById('btnDeleteCoupon');
 
-  updatePriceChips('100');
-  updateIconChips('gift');
+  if (existingCoupon) {
+    if (titleEl) titleEl.textContent = 'Edit Kupon Hadiah';
+    if (idInput) idInput.value = existingCoupon.id;
+    if (nameInput) nameInput.value = existingCoupon.name;
+    if (priceInput) priceInput.value = existingCoupon.price_xp;
+    if (iconInput) iconInput.value = existingCoupon.icon_key || 'gift';
+    if (btnSave) btnSave.textContent = 'Simpan Perubahan';
+    if (btnDelete) btnDelete.style.display = 'block';
+
+    updatePriceChips(String(existingCoupon.price_xp));
+    updateIconChips(existingCoupon.icon_key || 'gift');
+  } else {
+    if (titleEl) titleEl.textContent = 'Bikin Kupon Hadiah';
+    if (idInput) idInput.value = '';
+    if (nameInput) nameInput.value = '';
+    if (priceInput) priceInput.value = '100';
+    if (iconInput) iconInput.value = 'gift';
+    if (btnSave) btnSave.textContent = 'Bikin Kupon';
+    if (btnDelete) btnDelete.style.display = 'none';
+
+    updatePriceChips('100');
+    updateIconChips('gift');
+  }
 
   backdrop.classList.add('active');
   sheet.classList.add('active');
@@ -297,6 +334,7 @@ function setupCouponSheetHandlers() {
   const form = document.getElementById('formCoupon');
   const priceInput = document.getElementById('couponPrice');
   const iconInput = document.getElementById('couponIconKey');
+  const btnDelete = document.getElementById('btnDeleteCoupon');
 
   // Pilih harga chip
   document.querySelectorAll('#couponPriceChips .chip-btn').forEach(btn => {
@@ -316,12 +354,55 @@ function setupCouponSheetHandlers() {
     });
   });
 
-  // Submit Simpan Kupon
+  // Hapus Kupon
+  if (btnDelete) {
+    btnDelete.addEventListener('click', async () => {
+      const id = document.getElementById('couponId')?.value;
+      if (!id) return;
+
+      const ok = await showConfirmModal({
+        title: 'Hapus Kupon Hadiah',
+        message: 'Yakin ingin menghapus kupon ini dari toko hadiah?',
+        confirmText: 'Hapus',
+        cancelText: 'Batal',
+        isDanger: true
+      });
+      if (!ok) return;
+
+      btnDelete.disabled = true;
+      btnDelete.textContent = 'Menghapus…';
+
+      try {
+        const { error } = await supabase
+          .from('coupons')
+          .update({ is_active: false })
+          .eq('id', id);
+
+        if (error) {
+          console.error('Error delete coupon:', error);
+          showToast('Gagal menghapus kupon');
+          return;
+        }
+
+        showToast('Kupon hadiah berhasil dihapus');
+        closeCouponSheet();
+        await loadCouponsData();
+        renderCoupons();
+        renderGiftStrip();
+      } finally {
+        btnDelete.disabled = false;
+        btnDelete.textContent = 'Hapus Kupon';
+      }
+    });
+  }
+
+  // Submit Simpan Kupon (Insert / Update)
   if (form) {
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
       if (isSubmittingCoupon) return;
 
+      const id = document.getElementById('couponId')?.value;
       const name = document.getElementById('couponName').value.trim();
       const price = parseInt(priceInput.value || '100', 10);
       const iconKey = iconInput.value || 'gift';
@@ -342,24 +423,40 @@ function setupCouponSheetHandlers() {
       isSubmittingCoupon = true;
 
       try {
-        const { error } = await supabase
-          .from('coupons')
-          .insert({
-            couple_id: state.profile.couple_id,
-            name,
-            price_xp: price,
-            icon_key: iconKey,
-            is_active: true,
-            created_by: state.profile.id
-          });
+        let err;
+        if (id) {
+          // Update
+          const { error } = await supabase
+            .from('coupons')
+            .update({
+              name,
+              price_xp: price,
+              icon_key: iconKey
+            })
+            .eq('id', id);
+          err = error;
+        } else {
+          // Insert
+          const { error } = await supabase
+            .from('coupons')
+            .insert({
+              couple_id: state.profile.couple_id,
+              name,
+              price_xp: price,
+              icon_key: iconKey,
+              is_active: true,
+              created_by: state.profile.id
+            });
+          err = error;
+        }
 
-        if (error) {
-          console.error('Error create coupon:', error);
-          showToast('Gagal membuat kupon');
+        if (err) {
+          console.error('Error save coupon:', err);
+          showToast('Gagal menyimpan kupon');
           return;
         }
 
-        showToast('Kupon hadiah baru berhasil dibuat!');
+        showToast(id ? 'Kupon berhasil diperbarui!' : 'Kupon hadiah baru berhasil dibuat!');
         closeCouponSheet();
         await loadCouponsData();
         renderCoupons();
@@ -370,7 +467,7 @@ function setupCouponSheetHandlers() {
       } finally {
         isSubmittingCoupon = false;
         btnSave.disabled = false;
-        btnSave.textContent = 'Bikin Kupon';
+        btnSave.textContent = id ? 'Simpan Perubahan' : 'Bikin Kupon';
       }
     });
   }
