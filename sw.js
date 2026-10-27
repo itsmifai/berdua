@@ -2,7 +2,7 @@
 // BERDUA — Service Worker (PWA Shell Cache & Offline Fallback)
 // ==============================================================================
 
-const CACHE_NAME = 'berdua-v4';
+const CACHE_NAME = 'berdua-v5';
 
 // Daftar aset inti app shell yang di-cache
 const STATIC_ASSETS = [
@@ -34,13 +34,14 @@ self.addEventListener('install', (event) => {
   );
 });
 
-// Activate: Bersihkan cache versi lama saat update
+// Activate: Bersihkan semua cache lama
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) => {
       return Promise.all(
         keys.map((key) => {
           if (key !== CACHE_NAME) {
+            console.log('[SW] Menghapus cache usang:', key);
             return caches.delete(key);
           }
         })
@@ -49,53 +50,35 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Fetch: Network-first untuk navigasi, Stale-while-revalidate untuk shell, jangan cache Supabase API
+// Fetch: NETWORK-FIRST untuk SEMUA request agar file JS selalu up-to-date
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
-  // JANGAN cache request ke Supabase API atau eksternal CDN dinamis
+  // Jangan sentuh request ke Supabase API
   if (url.hostname.includes('supabase.co')) {
     return;
   }
 
-  // Navigasi halaman HTML: Network-first dengan fallback ke cache
-  if (event.request.mode === 'navigate') {
-    event.respondWith(
-      fetch(event.request)
-        .catch(() => {
-          return caches.match('./index.html') || caches.match('./login.html');
-        })
-    );
-    return;
-  }
-
-  // Aset statis: Cache-first dengan network update di background
+  // Network-First dengan fallback ke cache jika offline
   event.respondWith(
-    caches.match(event.request).then((cachedResponse) => {
-      if (cachedResponse) {
-        // Update cache di background
-        fetch(event.request).then((networkResponse) => {
-          if (networkResponse && networkResponse.status === 200) {
-            caches.open(CACHE_NAME).then((cache) => {
-              cache.put(event.request, networkResponse);
-            });
-          }
-        }).catch(() => {});
-        return cachedResponse;
-      }
-
-      return fetch(event.request).then((networkResponse) => {
-        if (!networkResponse || networkResponse.status !== 200 || networkResponse.type !== 'basic') {
-          return networkResponse;
+    fetch(event.request)
+      .then((networkResponse) => {
+        if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic') {
+          const responseToCache = networkResponse.clone();
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(event.request, responseToCache);
+          });
         }
-
-        const responseToCache = networkResponse.clone();
-        caches.open(CACHE_NAME).then((cache) => {
-          cache.put(event.request, responseToCache);
-        });
-
         return networkResponse;
-      });
-    })
+      })
+      .catch(() => {
+        return caches.match(event.request).then((cachedResponse) => {
+          if (cachedResponse) return cachedResponse;
+          if (event.request.mode === 'navigate') {
+            return caches.match('./index.html') || caches.match('./login.html');
+          }
+          return new Response('Offline', { status: 503, statusText: 'Offline' });
+        });
+      })
   );
 });

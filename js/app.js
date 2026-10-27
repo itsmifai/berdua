@@ -64,28 +64,34 @@ export function switchTab(name) {
   }
 }
 
-// Global hook switchTab untuk elemen dengan data-switch
-document.querySelectorAll('[data-switch]').forEach(btn => {
-  btn.addEventListener('click', (e) => {
-    e.preventDefault();
-    const tab = btn.getAttribute('data-switch');
-    switchTab(tab);
+export function initNavigation() {
+  // Global hook switchTab untuk elemen dengan data-switch
+  document.querySelectorAll('[data-switch]').forEach(btn => {
+    btn.onclick = (e) => {
+      e.preventDefault();
+      const tab = btn.getAttribute('data-switch');
+      switchTab(tab);
+    };
   });
-});
 
-// Bottom navigation click listeners
-document.querySelectorAll('.nav-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    const viewName = btn.dataset.view;
-    if (viewName) switchTab(viewName);
+  // Bottom navigation click listeners
+  document.querySelectorAll('.nav-btn').forEach(btn => {
+    btn.onclick = () => {
+      const viewName = btn.dataset.view;
+      if (viewName) switchTab(viewName);
+    };
   });
-});
+}
+
+// Inisialisasi navigasi langsung saat script dievaluasi
+initNavigation();
 
 /* ==============================================================================
    APP INITIALIZATION
    ============================================================================== */
 async function init() {
   try {
+    initNavigation();
     // 1. Validasi konfigurasi Supabase
     if (!isSupabaseConfigured()) {
       console.error('Supabase belum dikonfigurasi!');

@@ -1359,10 +1359,14 @@ body {
   transition: transform 0.25s cubic-bezier(0.2, 0.9, 0.3, 1);
   max-height: 85vh;
   overflow-y: auto;
+  pointer-events: none;
+  visibility: hidden;
 }
 
 .bottom-sheet.active {
   transform: translateY(0);
+  pointer-events: auto;
+  visibility: visible;
 }
 
 .sheet-handle {
