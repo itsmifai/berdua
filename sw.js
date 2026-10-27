@@ -2,7 +2,7 @@
 // BERDUA — Service Worker (PWA Shell Cache & Offline Fallback)
 // ==============================================================================
 
-const CACHE_NAME = 'berdua-v5';
+const CACHE_NAME = 'berdua-v6';
 
 // Daftar aset inti app shell yang di-cache
 const STATIC_ASSETS = [

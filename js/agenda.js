@@ -63,9 +63,9 @@ export function formatTimeDisplay(timeStr) {
  */
 export function getCategoryColor(catKey) {
   if (!catKey) return '#E2725B';
-  const norm = catKey.toLowerCase().trim();
-  const found = customCategories.find(c => c.key?.toLowerCase() === norm || c.name.toLowerCase() === norm);
-  if (found) return found.color;
+  const norm = String(catKey).toLowerCase().trim();
+  const found = customCategories.find(c => c && (String(c.key || '').toLowerCase() === norm || String(c.name || '').toLowerCase() === norm));
+  if (found && found.color) return found.color;
   return '#E2725B';
 }
 
@@ -74,19 +74,25 @@ export function getCategoryColor(catKey) {
  */
 export function getCategoryName(catKey) {
   if (!catKey) return 'Kencan';
-  const norm = catKey.toLowerCase().trim();
-  const found = customCategories.find(c => c.key?.toLowerCase() === norm || c.name.toLowerCase() === norm);
-  if (found) return found.name;
-  return catKey;
+  const norm = String(catKey).toLowerCase().trim();
+  const found = customCategories.find(c => c && (String(c.key || '').toLowerCase() === norm || String(c.name || '').toLowerCase() === norm));
+  if (found && found.name) return found.name;
+  return String(catKey);
 }
+
+let agendaHandlersInitialized = false;
+let isSubmittingAgenda = false;
 
 /**
  * Inisialisasi modul Agenda
  */
 export async function initAgenda() {
-  setupDomEvents();
-  setupSheetHandlers();
-  setupCategoryManagerHandlers();
+  if (!agendaHandlersInitialized) {
+    setupDomEvents();
+    setupSheetHandlers();
+    setupCategoryManagerHandlers();
+    agendaHandlersInitialized = true;
+  }
 
   await loadCategories();
   renderCategoryChips();
@@ -510,6 +516,8 @@ function setupSheetHandlers() {
   if (form) {
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
+      if (isSubmittingAgenda) return;
+
       const id = document.getElementById('agendaId').value;
       const title = document.getElementById('agendaTitle').value.trim();
       const date = document.getElementById('agendaDate').value;
@@ -540,40 +548,47 @@ function setupSheetHandlers() {
       const btnSave = document.getElementById('btnSaveAgenda');
       btnSave.disabled = true;
       btnSave.textContent = 'Menyimpan…';
+      isSubmittingAgenda = true;
 
-      let err;
-      if (id) {
-        const { error } = await supabase
-          .from('agenda_events')
-          .update({ title, event_date: date, event_time: time, location, category })
-          .eq('id', id);
-        err = error;
-      } else {
-        const { error } = await supabase
-          .from('agenda_events')
-          .insert(payload);
-        err = error;
+      try {
+        let err;
+        if (id) {
+          const { error } = await supabase
+            .from('agenda_events')
+            .update({ title, event_date: date, event_time: time, location, category })
+            .eq('id', id);
+          err = error;
+        } else {
+          const { error } = await supabase
+            .from('agenda_events')
+            .insert(payload);
+          err = error;
+        }
+
+        if (err) {
+          console.error('Error simpan agenda:', err);
+          showToast('Gagal menyimpan agenda');
+          return;
+        }
+
+        showToast(id ? 'Agenda berhasil diperbarui' : 'Agenda baru disimpan');
+        closeAgendaSheet();
+        await loadAgendaEvents();
+        selectedDate = date;
+        const [y, m] = date.split('-').map(Number);
+        currentYear = y;
+        currentMonth = m - 1;
+        renderCalendar();
+        renderDayList();
+        renderUpcomingAgenda();
+      } catch (ex) {
+        console.error('Exception simpan agenda:', ex);
+        showToast('Terjadi kesalahan saat menyimpan agenda');
+      } finally {
+        isSubmittingAgenda = false;
+        btnSave.disabled = false;
+        btnSave.textContent = 'Simpan Agenda';
       }
-
-      btnSave.disabled = false;
-      btnSave.textContent = 'Simpan Agenda';
-
-      if (err) {
-        console.error('Error simpan agenda:', err);
-        showToast('Gagal menyimpan agenda');
-        return;
-      }
-
-      showToast(id ? 'Agenda berhasil diperbarui' : 'Agenda baru disimpan');
-      closeAgendaSheet();
-      await loadAgendaEvents();
-      selectedDate = date;
-      const [y, m] = date.split('-').map(Number);
-      currentYear = y;
-      currentMonth = m - 1;
-      renderCalendar();
-      renderDayList();
-      renderUpcomingAgenda();
     });
   }
 

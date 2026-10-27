@@ -89,9 +89,15 @@ initNavigation();
 /* ==============================================================================
    APP INITIALIZATION
    ============================================================================== */
+let appInitialized = false;
+
 async function init() {
+  if (appInitialized) return;
+  appInitialized = true;
+
   try {
     initNavigation();
+
     // 1. Validasi konfigurasi Supabase
     if (!isSupabaseConfigured()) {
       console.error('Supabase belum dikonfigurasi!');
@@ -118,17 +124,12 @@ async function init() {
     state.partner = profile.partner || null;
     renderUserHeader(profile);
 
-    // 4. Inisialisasi semua fitur secara paralel untuk performa
-    await Promise.all([
-      initAgenda(),
-      initMisi(),
-    ]);
-
-    await Promise.all([
-      initStreak(),
-      initPoin(),
-      initProfil(),
-    ]);
+    // 4. Inisialisasi setiap fitur secara terisolasi agar kegagalan satu modul tidak mematikan app
+    try { await initAgenda(); } catch (e) { console.error('Gagal initAgenda:', e); }
+    try { await initMisi(); } catch (e) { console.error('Gagal initMisi:', e); }
+    try { await initStreak(); } catch (e) { console.error('Gagal initStreak:', e); }
+    try { await initPoin(); } catch (e) { console.error('Gagal initPoin:', e); }
+    try { await initProfil(); } catch (e) { console.error('Gagal initProfil:', e); }
 
     // 5. Aktifkan Realtime Sync (Fase 6)
     setupRealtimeSubscriptions();
@@ -188,11 +189,17 @@ export function renderUserHeader(profile) {
 /* ==============================================================================
    SUPABASE REALTIME SUBSCRIPTIONS (Fase 6)
    ============================================================================== */
+let activeRealtimeChannel = null;
+
 export function setupRealtimeSubscriptions() {
   const coupleId = state.profile?.couple_id;
   if (!coupleId || !isSupabaseConfigured()) return;
 
-  supabase.channel(`couple-live-${coupleId}`)
+  if (activeRealtimeChannel) {
+    try { supabase.removeChannel(activeRealtimeChannel); } catch (_) {}
+  }
+
+  activeRealtimeChannel = supabase.channel(`couple-live-${coupleId}`)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'mission_completions', filter: `couple_id=eq.${coupleId}` }, async () => {
       await loadMissionsData();
       renderTodayMissions();

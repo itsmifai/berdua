@@ -28,11 +28,17 @@ const CHEERS = [
 let allMissions = [];
 let todayCompletions = [];
 
+let missionHandlersInitialized = false;
+let isSubmittingMission = false;
+
 /**
  * Inisialisasi modul Misi
  */
 export async function initMisi() {
-  setupMissionDomEvents();
+  if (!missionHandlersInitialized) {
+    setupMissionDomEvents();
+    missionHandlersInitialized = true;
+  }
   await loadMissionsData();
   renderTodayMissions();
   renderAllMissions();
@@ -456,6 +462,8 @@ function setupMissionSheetHandlers() {
   if (form) {
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
+      if (isSubmittingMission) return;
+
       const id = document.getElementById('missionId').value;
       const title = document.getElementById('missionTitle').value.trim();
       const difficulty = diffInput.value || 'easy';
@@ -474,42 +482,49 @@ function setupMissionSheetHandlers() {
       const btnSave = document.getElementById('btnSaveMission');
       btnSave.disabled = true;
       btnSave.textContent = 'Menyimpan…';
+      isSubmittingMission = true;
 
-      let err;
-      if (id) {
-        const { error } = await supabase
-          .from('missions')
-          .update({ title, difficulty, assignee })
-          .eq('id', id);
-        err = error;
-      } else {
-        const { error } = await supabase
-          .from('missions')
-          .insert({
-            couple_id: state.profile.couple_id,
-            title,
-            difficulty,
-            assignee,
-            created_by: state.profile.id,
-            is_active: true
-          });
-        err = error;
+      try {
+        let err;
+        if (id) {
+          const { error } = await supabase
+            .from('missions')
+            .update({ title, difficulty, assignee })
+            .eq('id', id);
+          err = error;
+        } else {
+          const { error } = await supabase
+            .from('missions')
+            .insert({
+              couple_id: state.profile.couple_id,
+              title,
+              difficulty,
+              assignee,
+              created_by: state.profile.id,
+              is_active: true
+            });
+          err = error;
+        }
+
+        if (err) {
+          console.error('Error save mission:', err);
+          showToast('Gagal menyimpan misi');
+          return;
+        }
+
+        showToast(id ? 'Misi berhasil diperbarui' : 'Misi baru ditambahkan!');
+        closeMissionSheet();
+        await loadMissionsData();
+        renderTodayMissions();
+        renderAllMissions();
+      } catch (ex) {
+        console.error('Exception simpan misi:', ex);
+        showToast('Terjadi kesalahan saat menyimpan misi');
+      } finally {
+        isSubmittingMission = false;
+        btnSave.disabled = false;
+        btnSave.textContent = 'Simpan Misi';
       }
-
-      btnSave.disabled = false;
-      btnSave.textContent = 'Simpan Misi';
-
-      if (err) {
-        console.error('Error save mission:', err);
-        showToast('Gagal menyimpan misi');
-        return;
-      }
-
-      showToast(id ? 'Misi berhasil diperbarui' : 'Misi baru ditambahkan!');
-      closeMissionSheet();
-      await loadMissionsData();
-      renderTodayMissions();
-      renderAllMissions();
     });
   }
 
