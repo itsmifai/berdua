@@ -305,13 +305,14 @@ export async function toggleMission(missionId, checkBtn) {
       .from('mission_completions')
       .delete()
       .eq('id', existingCompletion.id)
-      .then(({ error }) => {
+      .then(async ({ error }) => {
         if (error) {
           console.error('Error delete completion:', error);
           // Kembalikan state jika gagal di server
           todayCompletions = prevCompletions;
           state.profile.xp_balance = prevXp;
           streakState.myWeekXp = prevWeekXp;
+          lockXpFor(0); // buka lock agar Realtime bisa koreksi
           updateXpDisplays();
           renderTodayMissions();
           renderAllMissions();
@@ -320,6 +321,20 @@ export async function toggleMission(missionId, checkBtn) {
           renderStreakCard();
           showToast('Gagal membatalkan misi di server');
         } else {
+          // Konfirmasi XP dari DB sebagai ground truth, lalu buka lock
+          try {
+            const { data: freshProfile } = await supabase
+              .from('profiles')
+              .select('xp_balance')
+              .eq('id', myId)
+              .single();
+            if (freshProfile) {
+              state.profile.xp_balance = freshProfile.xp_balance;
+              updateXpDisplays();
+              renderUserHeader(state.profile);
+            }
+          } catch (_) {}
+          lockXpFor(0); // buka lock — XP sudah confirmed dari DB
           loadStreakData();
           loadWeeklyLeaderboard();
         }
@@ -384,13 +399,14 @@ export async function toggleMission(missionId, checkBtn) {
       })
       .select()
       .single()
-      .then(({ data, error }) => {
+      .then(async ({ data, error }) => {
         if (error) {
           console.error('Error insert completion:', error);
           // Kembalikan state jika gagal
           todayCompletions = prevCompletions;
           state.profile.xp_balance = prevXp;
           streakState.myWeekXp = prevWeekXp;
+          lockXpFor(0); // buka lock agar Realtime bisa koreksi
           updateXpDisplays();
           renderTodayMissions();
           renderAllMissions();
@@ -399,8 +415,25 @@ export async function toggleMission(missionId, checkBtn) {
           renderStreakCard();
           showToast('Gagal mencatat misi di server');
         } else if (data) {
+          // Ganti ID temp dengan ID real dari DB
           const idx = todayCompletions.findIndex(c => c.id === tempId);
           if (idx !== -1) todayCompletions[idx] = data;
+
+          // Konfirmasi XP dari DB sebagai ground truth (DB trigger sudah jalan)
+          // Ini menghilangkan semua kemungkinan nilai yang salah dari Realtime echo
+          try {
+            const { data: freshProfile } = await supabase
+              .from('profiles')
+              .select('xp_balance')
+              .eq('id', myId)
+              .single();
+            if (freshProfile) {
+              state.profile.xp_balance = freshProfile.xp_balance;
+              updateXpDisplays();
+              renderUserHeader(state.profile);
+            }
+          } catch (_) {}
+          lockXpFor(0); // buka lock — XP sudah confirmed dari DB
           loadStreakData();
           loadWeeklyLeaderboard();
         }

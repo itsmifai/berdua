@@ -350,14 +350,12 @@ export function setupRealtimeSubscriptions() {
     })
     .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, async (payload) => {
       if (payload.new?.id === state.profile?.id) {
-        // XP Lock guard: kalau optimistic update masih aktif, pertahankan nilai optimistic
-        // dan hanya terima update non-XP (nama, dll). Ini mencegah "balik ke angka lama"
-        // saat Realtime echo datang lebih cepat dari DB trigger selesai.
-        const incomingXp = payload.new?.xp_balance ?? state.profile.xp_balance;
+        // Selama XP Lock aktif: blokir total update XP dari Realtime.
+        // XP sudah di-handle oleh optimistic update + post-DB fetch di misi.js.
+        // Ini mencegah Realtime echo (baik stale maupun double-fire) dari mengubah angka XP.
         const mergedProfile = { ...state.profile, ...payload.new };
         if (isXpLocked()) {
-          // Hanya terima jika DB sudah menunjukkan nilai ≥ optimistic kita (sudah settled)
-          mergedProfile.xp_balance = Math.max(incomingXp, state.profile.xp_balance);
+          mergedProfile.xp_balance = state.profile.xp_balance;
         }
         state.profile = mergedProfile;
         renderUserHeader(state.profile);
