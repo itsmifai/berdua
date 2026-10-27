@@ -96,6 +96,7 @@ export async function initAgenda() {
 
   await loadCategories();
   renderCategoryChips();
+  renderCalendarLegend();
   await loadAgendaEvents();
   renderCalendar();
   renderDayList();
@@ -303,6 +304,21 @@ export function renderCalendar() {
 
     calGrid.appendChild(btn);
   }
+
+  // Render keterangan warna di bawah kalender
+  renderCalendarLegend();
+}
+
+/**
+ * Render keterangan / legenda kategori di bawah kalender
+ */
+export function renderCalendarLegend() {
+  const container = document.getElementById('cal-legend');
+  if (!container) return;
+
+  container.innerHTML = customCategories.map(cat => `
+    <span><i style="background:${cat.color}"></i> ${escapeHtml(cat.name)}</span>
+  `).join('');
 }
 
 /**
@@ -736,6 +752,14 @@ function renderCategoryList() {
 
       customCategories = customCategories.filter(c => c.key !== key);
 
+      // Alihkan agenda yang memakai kategori ini ke kategori fallback
+      const fallbackKey = customCategories[0]?.key || 'kencan';
+      agendaEvents.forEach(evt => {
+        if (evt.category === key) {
+          evt.category = fallbackKey;
+        }
+      });
+
       // Hapus dari Supabase jika ada
       const coupleId = state.profile?.couple_id;
       if (isSupabaseConfigured() && coupleId) {
@@ -745,12 +769,19 @@ function renderCategoryList() {
             .delete()
             .eq('couple_id', coupleId)
             .eq('key', key);
+
+          await supabase
+            .from('agenda_events')
+            .update({ category: fallbackKey })
+            .eq('couple_id', coupleId)
+            .eq('category', key);
         } catch (_) {}
       }
 
       await saveCategories();
       renderCategoryList();
       renderCategoryChips();
+      renderCalendarLegend();
       renderCalendar();
       renderDayList();
       renderUpcomingAgenda();
@@ -827,6 +858,7 @@ function setupCategoryManagerHandlers() {
       resetCategoryForm();
       renderCategoryList();
       renderCategoryChips();
+      renderCalendarLegend();
       renderCalendar();
       renderDayList();
       renderUpcomingAgenda();
