@@ -365,89 +365,130 @@ body {
 .flame-wrap {
   position: relative;
   width: 92px;
-  height: 124px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: flex-end;
+  height: 145px;
 }
 
 .flame-glow {
   position: absolute;
-  inset: -20px;
-  background: radial-gradient(circle, rgba(245,120,35,0.35) 0%, transparent 65%);
-  animation: glowPulse 2.4s ease-in-out infinite;
+  inset: -24px;
+  background: radial-gradient(circle, rgba(255,100,20,0.42) 0%, rgba(255,160,30,0.18) 45%, transparent 70%);
+  animation: glowPulse 2s ease-in-out infinite;
   z-index: 0;
 }
 
 @keyframes glowPulse {
-  0%, 100% { opacity: 0.7; transform: scale(1); }
-  50% { opacity: 1; transform: scale(1.18); }
+  0%, 100% { opacity: 0.65; transform: scale(1); }
+  50%       { opacity: 1;    transform: scale(1.22); }
 }
 
-/* ===== Lidah api di belakang karakter ===== */
-.fire-tongues {
+/* ===== Api realistis multi-layer ===== */
+.real-fire {
   position: absolute;
-  bottom: -2px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 86px;
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  gap: 3px;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 130px;
   z-index: 0;
 }
 
-.fire-tongue {
-  border-radius: 50% 50% 30% 30% / 55% 55% 45% 45%;
+/* Setiap lapisan = tumpukan gradien api berbentuk bulat-lancip */
+.rf {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  border-radius: 48% 48% 30% 30% / 58% 58% 42% 42%;
   transform-origin: bottom center;
 }
 
-.fire-tongue.ft-c {
-  width: 30px;
-  height: 62px;
-  background: linear-gradient(to top, #FF6B1A 0%, #F5A623 50%, #FFE87A 100%);
-  animation: tongueRise 1.25s ease-in-out infinite;
+/* Layer 1 – api luar: merah gelap, paling besar, paling blur */
+.rf-1 {
+  width: 80px;
+  height: 115px;
+  background: radial-gradient(ellipse 55% 80% at 50% 88%,
+    #7A0000 0%, #C41800 35%, #E03000 60%, transparent 80%);
+  filter: blur(5px);
+  opacity: 0.85;
+  animation: rfBurn 1.4s ease-in-out infinite;
 }
 
-.fire-tongue.ft-l {
+/* Layer 2 – merah-oranye */
+.rf-2 {
+  width: 64px;
+  height: 98px;
+  background: radial-gradient(ellipse 55% 78% at 50% 88%,
+    #B02000 0%, #E83500 40%, #FF5500 65%, transparent 85%);
+  filter: blur(3.5px);
+  opacity: 0.9;
+  animation: rfBurn 1.15s ease-in-out infinite 0.15s;
+}
+
+/* Layer 3 – oranye */
+.rf-3 {
+  width: 50px;
+  height: 80px;
+  background: radial-gradient(ellipse 55% 76% at 50% 88%,
+    #E84000 0%, #FF6600 45%, #FF9900 70%, transparent 90%);
+  filter: blur(2px);
+  opacity: 0.92;
+  animation: rfBurn2 1.0s ease-in-out infinite 0.08s;
+}
+
+/* Layer 4 – amber-kuning */
+.rf-4 {
+  width: 36px;
+  height: 58px;
+  background: radial-gradient(ellipse 55% 74% at 50% 88%,
+    #FF7700 0%, #FFAA00 50%, #FFCC33 75%, transparent 92%);
+  filter: blur(1.2px);
+  opacity: 0.95;
+  animation: rfBurn2 0.85s ease-in-out infinite 0.22s;
+}
+
+/* Layer 5 – inti putih-kuning panas */
+.rf-5 {
   width: 20px;
-  height: 44px;
-  background: linear-gradient(to top, #E2725B 0%, #F5A623 55%, #FFE066 100%);
-  animation: tongueRise 1.55s ease-in-out infinite 0.12s;
+  height: 36px;
+  background: radial-gradient(ellipse 55% 72% at 50% 88%,
+    #FFD700 0%, #FFEC6E 55%, #FFFBCC 85%, transparent 100%);
+  filter: blur(0.6px);
+  opacity: 1;
+  animation: rfBurn 0.7s ease-in-out infinite 0.12s;
 }
 
-.fire-tongue.ft-r {
-  width: 20px;
-  height: 42px;
-  background: linear-gradient(to top, #E2725B 0%, #F5A623 55%, #FFD98A 100%);
-  animation: tongueRise 1.45s ease-in-out infinite 0.28s;
+@keyframes rfBurn {
+  0%   { transform: translateX(-50%) scaleX(1)    scaleY(1)    rotate(-1.5deg); opacity: 0.88; }
+  30%  { transform: translateX(-50%) scaleX(0.88) scaleY(1.07) rotate(2.2deg);  opacity: 1;    }
+  60%  { transform: translateX(-50%) scaleX(1.06) scaleY(0.94) rotate(-1deg);   opacity: 0.84; }
+  100% { transform: translateX(-50%) scaleX(1)    scaleY(1)    rotate(-1.5deg); opacity: 0.88; }
 }
 
-@keyframes tongueRise {
-  0%   { transform: scaleY(1)    rotate(0deg);   opacity: 0.88; }
-  25%  { transform: scaleY(1.09) rotate(-2deg);  opacity: 1;    }
-  50%  { transform: scaleY(0.93) rotate(1.5deg); opacity: 0.82; }
-  75%  { transform: scaleY(1.07) rotate(-1deg);  opacity: 1;    }
-  100% { transform: scaleY(1)    rotate(0deg);   opacity: 0.88; }
+@keyframes rfBurn2 {
+  0%   { transform: translateX(-50%) scaleX(1)    scaleY(1)    rotate(1deg);    opacity: 0.9;  }
+  35%  { transform: translateX(-50%) scaleX(1.07) scaleY(0.93) rotate(-2deg);   opacity: 1;    }
+  65%  { transform: translateX(-50%) scaleX(0.9)  scaleY(1.06) rotate(1.5deg);  opacity: 0.85; }
+  100% { transform: translateX(-50%) scaleX(1)    scaleY(1)    rotate(1deg);    opacity: 0.9;  }
 }
 
-/* Karakter api di atas lidah api */
+/* Karakter api di atas semua layer */
 .flame-svg {
-  position: relative;
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  margin: auto;
   z-index: 1;
-  width: 92px;
-  height: 104px;
-  animation: flicker 1.6s ease-in-out infinite;
+  width: 88px;
+  height: 100px;
+  animation: flicker 1.7s ease-in-out infinite;
   transform-origin: bottom center;
 }
 
 @keyframes flicker {
-  0%, 100% { transform: scale(1) rotate(0deg); }
-  25% { transform: scale(1.04, 0.97) rotate(-1.5deg); }
-  50% { transform: scale(0.98, 1.05) rotate(1deg); }
-  75% { transform: scale(1.03, 0.98) rotate(-0.5deg); }
+  0%, 100% { transform: scale(1,1)       rotate(0deg); }
+  25%       { transform: scale(1.04,0.97) rotate(-1.5deg); }
+  50%       { transform: scale(0.97,1.04) rotate(1deg); }
+  75%       { transform: scale(1.03,0.97) rotate(-0.5deg); }
 }
 
 .flame-count {
