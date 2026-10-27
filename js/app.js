@@ -5,7 +5,7 @@
 import { requireAuth, getCurrentProfile, logout } from './auth.js';
 import { showToast } from './fx.js';
 import { supabase, isSupabaseConfigured } from './supabaseClient.js';
-import { initAgenda, loadAgendaEvents, renderCalendar, renderDayList, renderUpcomingAgenda } from './agenda.js';
+import { initAgenda, loadAgendaEvents, renderCalendar, renderDayList, renderUpcomingAgenda, loadCategories, renderCategoryChips } from './agenda.js';
 import { initMisi, loadMissionsData, renderTodayMissions, renderAllMissions } from './misi.js';
 import { initStreak, loadStreakData, loadWeeklyLeaderboard } from './streak.js';
 import { initPoin, loadCouponsData, renderCoupons, renderGiftStrip, renderRedemptions } from './poin.js';
@@ -197,6 +197,13 @@ export function setupRealtimeSubscriptions() {
     })
     .on('postgres_changes', { event: '*', schema: 'public', table: 'agenda_events', filter: `couple_id=eq.${coupleId}` }, async () => {
       await loadAgendaEvents();
+      renderCalendar();
+      renderDayList();
+      renderUpcomingAgenda();
+    })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'agenda_categories', filter: `couple_id=eq.${coupleId}` }, async () => {
+      await loadCategories();
+      renderCategoryChips();
       renderCalendar();
       renderDayList();
       renderUpcomingAgenda();

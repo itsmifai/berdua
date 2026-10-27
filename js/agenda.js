@@ -1,5 +1,5 @@
 // ==============================================================================
-// BERDUA — Agenda & Kalender Bersama (Fase 2)
+// BERDUA — Agenda & Kalender Bersama (Fase 2 + Custom Categories)
 // ==============================================================================
 
 import { supabase, isSupabaseConfigured } from './supabaseClient.js';
@@ -11,25 +11,33 @@ export const MONTHS = [
   'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
 ];
 
-export const CAT_COLOR = {
-  kencan: 'var(--terra)',
-  ibadah: 'var(--sage)',
-  kerja: '#8FA3B8',
-  spesial: 'var(--amber)'
-};
+export const COLOR_PALETTE = [
+  '#E2725B', // Terracotta
+  '#7D9B76', // Sage Green
+  '#8FA3B8', // Slate Blue
+  '#F5A623', // Amber
+  '#E88B88', // Soft Rose
+  '#9E86C8', // Lavender
+  '#4FA3A5', // Teal
+  '#D4A338', // Mustard
+  '#E05263', // Crimson
+  '#6C7A89'  // Charcoal
+];
 
-export const CAT_CLASS = {
-  kencan: 'cat-kencan',
-  ibadah: 'cat-ibadah',
-  kerja: 'cat-kerja',
-  spesial: 'cat-spesial'
-};
+export const DEFAULT_CATEGORIES = [
+  { key: 'kencan', name: 'Kencan', color: '#E2725B' },
+  { key: 'ibadah', name: 'Ibadah', color: '#7D9B76' },
+  { key: 'kerja', name: 'Kerja', color: '#8FA3B8' },
+  { key: 'spesial', name: 'Spesial', color: '#F5A623' }
+];
 
 // State internal modul Agenda
 let currentYear = new Date().getFullYear();
 let currentMonth = new Date().getMonth(); // 0-indexed
 let selectedDate = formatDateKey(new Date());
 let agendaEvents = [];
+export let customCategories = [...DEFAULT_CATEGORIES];
+let selectedPaletteColor = COLOR_PALETTE[0];
 
 /**
  * Helper format Date object menjadi string YYYY-MM-DD
@@ -51,14 +59,152 @@ export function formatTimeDisplay(timeStr) {
 }
 
 /**
+ * Mendapatkan warna dot untuk kategori tertentu
+ */
+export function getCategoryColor(catKey) {
+  if (!catKey) return '#E2725B';
+  const norm = catKey.toLowerCase().trim();
+  const found = customCategories.find(c => c.key?.toLowerCase() === norm || c.name.toLowerCase() === norm);
+  if (found) return found.color;
+  return '#E2725B';
+}
+
+/**
+ * Mendapatkan nama tampilan untuk kategori
+ */
+export function getCategoryName(catKey) {
+  if (!catKey) return 'Kencan';
+  const norm = catKey.toLowerCase().trim();
+  const found = customCategories.find(c => c.key?.toLowerCase() === norm || c.name.toLowerCase() === norm);
+  if (found) return found.name;
+  return catKey;
+}
+
+/**
  * Inisialisasi modul Agenda
  */
 export async function initAgenda() {
   setupDomEvents();
+  setupSheetHandlers();
+  setupCategoryManagerHandlers();
+
+  await loadCategories();
+  renderCategoryChips();
   await loadAgendaEvents();
   renderCalendar();
   renderDayList();
   renderUpcomingAgenda();
+}
+
+/**
+ * Muat kategori kustom dari Supabase (dengan fallback ke localStorage)
+ */
+export async function loadCategories() {
+  const coupleId = state.profile?.couple_id;
+  const storageKey = 'berdua_cats_' + (coupleId || 'default');
+
+  if (isSupabaseConfigured() && coupleId) {
+    try {
+      const { data, error } = await supabase
+        .from('agenda_categories')
+        .select('*')
+        .eq('couple_id', coupleId)
+        .order('created_at', { ascending: true });
+
+      if (!error && data && data.length > 0) {
+        customCategories = data.map(item => ({
+          id: item.id,
+          key: item.key || item.name.toLowerCase().replace(/\s+/g, '-'),
+          name: item.name,
+          color: item.color
+        }));
+        localStorage.setItem(storageKey, JSON.stringify(customCategories));
+        return;
+      }
+    } catch (e) {
+      console.warn('[Agenda] agenda_categories belum ada di DB, memakai cache lokal:', e.message);
+    }
+  }
+
+  // Fallback dari localStorage
+  const saved = localStorage.getItem(storageKey);
+  if (saved) {
+    try {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        customCategories = parsed;
+        return;
+      }
+    } catch (_) {}
+  }
+
+  // Default awal
+  customCategories = [...DEFAULT_CATEGORIES];
+}
+
+/**
+ * Simpan kategori ke Supabase dan localStorage
+ */
+async function saveCategories() {
+  const coupleId = state.profile?.couple_id;
+  const storageKey = 'berdua_cats_' + (coupleId || 'default');
+  localStorage.setItem(storageKey, JSON.stringify(customCategories));
+
+  if (isSupabaseConfigured() && coupleId) {
+    try {
+      for (const cat of customCategories) {
+        await supabase
+          .from('agenda_categories')
+          .upsert({
+            couple_id: coupleId,
+            key: cat.key,
+            name: cat.name,
+            color: cat.color
+          }, { onConflict: 'couple_id,key' });
+      }
+    } catch (err) {
+      console.warn('[Agenda] Sinkronisasi kategori ke Supabase gagal (tabel mungkin belum dibuat):', err.message);
+    }
+  }
+}
+
+/**
+ * Render chip-chip pilihan kategori di form agenda
+ */
+export function renderCategoryChips() {
+  const container = document.getElementById('agendaCategoryChips');
+  if (!container) return;
+
+  const categoryInput = document.getElementById('agendaCategory');
+  let currentVal = categoryInput?.value || (customCategories[0]?.key || 'kencan');
+
+  // Jika nilai saat ini tidak ada di daftar kategori, fallback ke kategori pertama
+  if (!customCategories.some(c => c.key === currentVal)) {
+    currentVal = customCategories[0]?.key || 'kencan';
+    if (categoryInput) categoryInput.value = currentVal;
+  }
+
+  container.innerHTML = customCategories.map(cat => {
+    const isSelected = (cat.key === currentVal);
+    const selStyle = isSelected 
+      ? `background: ${cat.color}; border-color: ${cat.color}; color: #fff;` 
+      : '';
+    const dotBg = isSelected ? '#fff' : cat.color;
+
+    return `
+      <button type="button" class="chip-btn ${isSelected ? 'selected' : ''}" data-cat="${escapeHtml(cat.key)}" style="${selStyle}">
+        <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:${dotBg}; margin-right:6px; vertical-align:middle;"></span>${escapeHtml(cat.name)}
+      </button>
+    `;
+  }).join('');
+
+  container.querySelectorAll('.chip-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const cat = btn.dataset.cat;
+      if (categoryInput) categoryInput.value = cat;
+      renderCategoryChips();
+    });
+  });
 }
 
 /**
@@ -136,7 +282,7 @@ export function renderCalendar() {
       dotsWrap.className = 'cal-dots';
       dayItems.slice(0, 3).forEach(evt => {
         const dot = document.createElement('i');
-        dot.style.background = CAT_COLOR[evt.category] || 'var(--terra)';
+        dot.style.background = getCategoryColor(evt.category);
         dotsWrap.appendChild(dot);
       });
       btn.appendChild(dotsWrap);
@@ -182,10 +328,11 @@ export function renderDayList() {
     if (evt.event_time) subInfo.push(formatTimeDisplay(evt.event_time));
     if (evt.location) subInfo.push(escapeHtml(evt.location));
     const subText = subInfo.length > 0 ? subInfo.join(' · ') : 'Sepanjang hari';
+    const catColor = getCategoryColor(evt.category);
 
     return `
       <div class="agenda-row" data-id="${evt.id}" style="border-bottom:1.5px solid var(--line); cursor:pointer;">
-        <span class="cat-dot ${CAT_CLASS[evt.category] || 'cat-kencan'}"></span>
+        <span class="cat-dot" style="background: ${catColor};"></span>
         <div class="a-info">
           <div class="a-title">${escapeHtml(evt.title)}</div>
           <div class="a-sub">${subText}</div>
@@ -195,7 +342,6 @@ export function renderDayList() {
     `;
   }).join('');
 
-  // Tautkan klik baris agenda untuk membuka sheet edit
   listEl.querySelectorAll('.agenda-row').forEach(row => {
     row.addEventListener('click', () => {
       const evtId = row.dataset.id;
@@ -231,6 +377,7 @@ export function renderUpcomingAgenda() {
     const mShort = MONTHS[m - 1].substring(0, 3);
     let sub = evt.event_time ? formatTimeDisplay(evt.event_time) : 'Sepanjang hari';
     if (evt.location) sub += ` · ${escapeHtml(evt.location)}`;
+    const catColor = getCategoryColor(evt.category);
 
     return `
       <div class="agenda-row" style="border-bottom: 1.5px solid var(--line); padding: 8px 0;">
@@ -242,14 +389,14 @@ export function renderUpcomingAgenda() {
           <div class="a-title">${escapeHtml(evt.title)}</div>
           <div class="a-sub">${sub}</div>
         </div>
-        <span class="cat-dot ${CAT_CLASS[evt.category] || 'cat-kencan'}"></span>
+        <span class="cat-dot" style="background: ${catColor};"></span>
       </div>
     `;
   }).join('');
 }
 
 /**
- * Setup DOM listeners untuk navigasi bulan, FAB, dan modal
+ * Setup DOM listeners untuk navigasi bulan & FAB
  */
 function setupDomEvents() {
   const btnPrev = document.getElementById('btnCalPrev');
@@ -283,13 +430,10 @@ function setupDomEvents() {
       openAgendaSheet(null);
     });
   }
-
-  // Setup form & bottom-sheet handlers
-  setupSheetHandlers();
 }
 
 /**
- * Membuka Bottom Sheet Agenda (Tambah / Edit)
+ * Membuka Bottom Sheet Tambah/Edit Agenda
  */
 export function openAgendaSheet(existingEvt = null) {
   const sheet = document.getElementById('sheetAgenda');
@@ -312,7 +456,7 @@ export function openAgendaSheet(existingEvt = null) {
     dateInput.value = existingEvt.event_date;
     timeInput.value = existingEvt.event_time ? existingEvt.event_time.substring(0, 5) : '';
     locationInput.value = existingEvt.location || '';
-    categoryInput.value = existingEvt.category || 'kencan';
+    categoryInput.value = existingEvt.category || (customCategories[0]?.key || 'kencan');
     btnDelete.style.display = 'block';
   } else {
     titleEl.textContent = 'Tambah Agenda';
@@ -321,12 +465,11 @@ export function openAgendaSheet(existingEvt = null) {
     dateInput.value = selectedDate;
     timeInput.value = '';
     locationInput.value = '';
-    categoryInput.value = 'kencan';
+    categoryInput.value = customCategories[0]?.key || 'kencan';
     btnDelete.style.display = 'none';
   }
 
-  // Update chip terpilih
-  updateCategoryChips(categoryInput.value);
+  renderCategoryChips();
 
   backdrop.classList.add('active');
   sheet.classList.add('active');
@@ -342,16 +485,6 @@ export function closeAgendaSheet() {
   if (backdrop) backdrop.classList.remove('active');
 }
 
-function updateCategoryChips(activeCat) {
-  document.querySelectorAll('#agendaCategoryChips .chip-btn').forEach(btn => {
-    if (btn.dataset.cat === activeCat) {
-      btn.classList.add('selected');
-    } else {
-      btn.classList.remove('selected');
-    }
-  });
-}
-
 function setupSheetHandlers() {
   const form = document.getElementById('formAgenda');
   const backdrop = document.getElementById('sheetBackdrop');
@@ -359,17 +492,19 @@ function setupSheetHandlers() {
   const categoryInput = document.getElementById('agendaCategory');
 
   if (backdrop) {
-    backdrop.addEventListener('click', closeAgendaSheet);
+    backdrop.addEventListener('click', () => {
+      closeAgendaSheet();
+      closeCategoryManager();
+    });
   }
 
-  // Pilih kategori chip
-  document.querySelectorAll('#agendaCategoryChips .chip-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const cat = btn.dataset.cat;
-      categoryInput.value = cat;
-      updateCategoryChips(cat);
+  // Tombol kelola kategori
+  const btnManage = document.getElementById('btnManageCategories');
+  if (btnManage) {
+    btnManage.addEventListener('click', () => {
+      openCategoryManager();
     });
-  });
+  }
 
   // Submit Simpan (Insert / Update)
   if (form) {
@@ -380,7 +515,7 @@ function setupSheetHandlers() {
       const date = document.getElementById('agendaDate').value;
       const time = document.getElementById('agendaTime').value || null;
       const location = document.getElementById('agendaLocation').value.trim() || null;
-      const category = categoryInput.value || 'kencan';
+      const category = categoryInput?.value || (customCategories[0]?.key || 'kencan');
 
       if (!title || !date) {
         showToast('Judul dan tanggal wajib diisi');
@@ -408,14 +543,12 @@ function setupSheetHandlers() {
 
       let err;
       if (id) {
-        // Update
         const { error } = await supabase
           .from('agenda_events')
           .update({ title, event_date: date, event_time: time, location, category })
           .eq('id', id);
         err = error;
       } else {
-        // Insert
         const { error } = await supabase
           .from('agenda_events')
           .insert(payload);
@@ -474,6 +607,201 @@ function setupSheetHandlers() {
       renderCalendar();
       renderDayList();
       renderUpcomingAgenda();
+    });
+  }
+}
+
+/* ==============================================================================
+   MANAJEMEN KATEGORI KUSTOM (Tambah, Edit, Hapus)
+   ============================================================================== */
+
+export function openCategoryManager() {
+  const sheet = document.getElementById('sheetCategoryManager');
+  const backdrop = document.getElementById('sheetBackdrop');
+  if (!sheet) return;
+
+  renderCategoryPalette();
+  renderCategoryList();
+  resetCategoryForm();
+
+  if (backdrop) backdrop.classList.add('active');
+  sheet.classList.add('active');
+}
+
+export function closeCategoryManager() {
+  const sheet = document.getElementById('sheetCategoryManager');
+  if (sheet) sheet.classList.remove('active');
+  renderCategoryChips();
+}
+
+function renderCategoryPalette() {
+  const row = document.getElementById('catPaletteRow');
+  if (!row) return;
+
+  row.innerHTML = COLOR_PALETTE.map(c => `
+    <button type="button" class="cat-color-choice ${c === selectedPaletteColor ? 'selected' : ''}" data-color="${c}" style="background:${c};"></button>
+  `).join('');
+
+  row.querySelectorAll('.cat-color-choice').forEach(btn => {
+    btn.addEventListener('click', () => {
+      selectedPaletteColor = btn.dataset.color;
+      renderCategoryPalette();
+    });
+  });
+}
+
+function renderCategoryList() {
+  const container = document.getElementById('categoryListContainer');
+  if (!container) return;
+
+  if (customCategories.length === 0) {
+    container.innerHTML = `<div style="text-align:center; font-size:12px; color:var(--ink-soft); padding:10px;">Belum ada kategori</div>`;
+    return;
+  }
+
+  container.innerHTML = customCategories.map(cat => `
+    <div class="cat-manage-item">
+      <div class="cat-item-left">
+        <span class="cat-dot" style="background:${cat.color}"></span>
+        <span>${escapeHtml(cat.name)}</span>
+      </div>
+      <div class="cat-actions">
+        <button type="button" class="cat-manage-btn edit" data-key="${escapeHtml(cat.key)}">Ubah</button>
+        <button type="button" class="cat-manage-btn delete" data-key="${escapeHtml(cat.key)}">Hapus</button>
+      </div>
+    </div>
+  `).join('');
+
+  // Hook Edit
+  container.querySelectorAll('.cat-manage-btn.edit').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const key = btn.dataset.key;
+      const cat = customCategories.find(c => c.key === key);
+      if (!cat) return;
+
+      document.getElementById('editCatKey').value = cat.key;
+      document.getElementById('catNameInput').value = cat.name;
+      selectedPaletteColor = cat.color;
+      renderCategoryPalette();
+
+      document.getElementById('btnSaveCategory').textContent = 'Simpan Perubahan';
+      document.getElementById('btnCancelEditCat').style.display = 'block';
+      document.getElementById('catNameInput').focus();
+    });
+  });
+
+  // Hook Hapus
+  container.querySelectorAll('.cat-manage-btn.delete').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const key = btn.dataset.key;
+      const cat = customCategories.find(c => c.key === key);
+      if (!cat) return;
+
+      if (customCategories.length <= 1) {
+        showToast('Minimal harus ada 1 kategori');
+        return;
+      }
+
+      if (!confirm(`Hapus kategori "${cat.name}"?`)) return;
+
+      customCategories = customCategories.filter(c => c.key !== key);
+
+      // Hapus dari Supabase jika ada
+      const coupleId = state.profile?.couple_id;
+      if (isSupabaseConfigured() && coupleId) {
+        try {
+          await supabase
+            .from('agenda_categories')
+            .delete()
+            .eq('couple_id', coupleId)
+            .eq('key', key);
+        } catch (_) {}
+      }
+
+      await saveCategories();
+      renderCategoryList();
+      renderCategoryChips();
+      renderCalendar();
+      renderDayList();
+      renderUpcomingAgenda();
+      showToast(`Kategori "${cat.name}" dihapus`);
+    });
+  });
+}
+
+function resetCategoryForm() {
+  const keyInput = document.getElementById('editCatKey');
+  const nameInput = document.getElementById('catNameInput');
+  const btnSave = document.getElementById('btnSaveCategory');
+  const btnCancel = document.getElementById('btnCancelEditCat');
+
+  if (keyInput) keyInput.value = '';
+  if (nameInput) nameInput.value = '';
+  if (btnSave) btnSave.textContent = 'Tambah Kategori';
+  if (btnCancel) btnCancel.style.display = 'none';
+  selectedPaletteColor = COLOR_PALETTE[0];
+  renderCategoryPalette();
+}
+
+function setupCategoryManagerHandlers() {
+  const btnClose = document.getElementById('btnCloseCatManager');
+  const btnSave = document.getElementById('btnSaveCategory');
+  const btnCancel = document.getElementById('btnCancelEditCat');
+  const nameInput = document.getElementById('catNameInput');
+
+  if (btnClose) {
+    btnClose.addEventListener('click', () => {
+      closeCategoryManager();
+    });
+  }
+
+  if (btnCancel) {
+    btnCancel.addEventListener('click', () => {
+      resetCategoryForm();
+    });
+  }
+
+  if (btnSave) {
+    btnSave.addEventListener('click', async () => {
+      const name = nameInput?.value.trim();
+      const editKey = document.getElementById('editCatKey')?.value;
+
+      if (!name) {
+        showToast('Ketik nama kategori terlebih dahulu');
+        nameInput?.focus();
+        return;
+      }
+
+      btnSave.disabled = true;
+
+      if (editKey) {
+        // Mode Ubah
+        const idx = customCategories.findIndex(c => c.key === editKey);
+        if (idx !== -1) {
+          customCategories[idx].name = name;
+          customCategories[idx].color = selectedPaletteColor;
+        }
+        showToast('Kategori berhasil diperbarui');
+      } else {
+        // Mode Tambah Baru
+        const newKey = name.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-' + Date.now().toString().slice(-4);
+        customCategories.push({
+          key: newKey,
+          name: name,
+          color: selectedPaletteColor
+        });
+        showToast('Kategori baru ditambahkan');
+      }
+
+      await saveCategories();
+      resetCategoryForm();
+      renderCategoryList();
+      renderCategoryChips();
+      renderCalendar();
+      renderDayList();
+      renderUpcomingAgenda();
+
+      btnSave.disabled = false;
     });
   }
 }

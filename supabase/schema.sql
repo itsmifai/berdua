@@ -57,7 +57,7 @@ create table if not exists agenda_events (
   event_date date not null,
   event_time time,                            -- nullable (agenda seharian)
   location text,                              -- nullable
-  category text not null default 'kencan' check (category in ('kencan','ibadah','kerja','spesial')),
+  category text not null default 'kencan' check (char_length(category) <= 30),
   created_by uuid not null references profiles(id) on delete cascade,
   created_at timestamptz default now()
 );
@@ -85,6 +85,17 @@ create table if not exists coupon_redemptions (
   redeemed_at timestamptz default now()
 );
 
+-- 8. TABEL: agenda_categories (Kategori kustom agenda per couple)
+create table if not exists agenda_categories (
+  id uuid primary key default gen_random_uuid(),
+  couple_id uuid not null references couples(id) on delete cascade,
+  key text not null,
+  name text not null check (char_length(name) <= 30),
+  color text not null default '#E2725B',
+  created_at timestamptz default now(),
+  unique (couple_id, key)
+);
+
 -- ==============================================================================
 -- HELPER FUNCTIONS & RLS
 -- ==============================================================================
@@ -101,6 +112,7 @@ alter table profiles enable row level security;
 alter table missions enable row level security;
 alter table mission_completions enable row level security;
 alter table agenda_events enable row level security;
+alter table agenda_categories enable row level security;
 alter table coupons enable row level security;
 alter table coupon_redemptions enable row level security;
 
@@ -158,6 +170,19 @@ create policy "Couple update agenda" on agenda_events for update
   using (couple_id = my_couple_id());
 
 create policy "Couple delete agenda" on agenda_events for delete
+  using (couple_id = my_couple_id());
+
+-- Policies: agenda_categories
+create policy "Couple read categories" on agenda_categories for select
+  using (couple_id = my_couple_id());
+
+create policy "Couple insert categories" on agenda_categories for insert
+  with check (couple_id = my_couple_id());
+
+create policy "Couple update categories" on agenda_categories for update
+  using (couple_id = my_couple_id());
+
+create policy "Couple delete categories" on agenda_categories for delete
   using (couple_id = my_couple_id());
 
 -- Policies: coupons
@@ -383,3 +408,4 @@ alter publication supabase_realtime add table missions;
 alter publication supabase_realtime add table coupons;
 alter publication supabase_realtime add table coupon_redemptions;
 alter publication supabase_realtime add table profiles;
+alter publication supabase_realtime add table agenda_categories;

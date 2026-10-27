@@ -456,18 +456,47 @@
       </div>
 
       <div class="form-group">
-        <label class="form-label">Kategori</label>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+          <label class="form-label" style="margin-bottom:0;">Kategori</label>
+          <button type="button" id="btnManageCategories" style="background:none; border:none; color:var(--terra); font-size:12px; font-weight:700; cursor:pointer; font-family:inherit;">+ Kelola Kategori</button>
+        </div>
         <div class="chips-row" id="agendaCategoryChips">
-          <button type="button" class="chip-btn terra selected" data-cat="kencan">Kencan</button>
-          <button type="button" class="chip-btn sage" data-cat="ibadah">Ibadah</button>
-          <button type="button" class="chip-btn" data-cat="kerja">Kerja</button>
-          <button type="button" class="chip-btn" data-cat="spesial">Spesial</button>
+          <!-- Di-render dinamis oleh renderCategoryChips() -->
         </div>
       </div>
 
       <button type="submit" class="btn-primary" id="btnSaveAgenda">Simpan Agenda</button>
       <button type="button" class="btn-secondary" id="btnDeleteAgenda" style="display:none; color:var(--terra); margin-top:10px;">Hapus Agenda</button>
     </form>
+  </div>
+
+  <!-- Bottom Sheet: Kelola Kategori Agenda -->
+  <div class="bottom-sheet" id="sheetCategoryManager" style="z-index: 105;">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title" id="sheetCategoryTitle">Kelola Kategori Agenda</div>
+
+    <!-- Form Tambah / Edit Kategori -->
+    <div style="background: var(--bg); border: 1.5px solid var(--line); border-radius: 18px; padding: 14px; margin-bottom: 16px;">
+      <input type="hidden" id="editCatKey" value="">
+      <div class="form-group" style="margin-bottom: 10px;">
+        <label class="form-label" for="catNameInput" style="font-size: 11.5px;">Nama Kategori</label>
+        <input type="text" id="catNameInput" class="form-input" placeholder="misal: Olahraga / Kuliner" maxlength="25">
+      </div>
+      <div class="form-group" style="margin-bottom: 12px;">
+        <label class="form-label" style="font-size: 11.5px;">Pilih Warna Titik</label>
+        <div class="cat-palette-row" id="catPaletteRow"></div>
+      </div>
+      <div style="display:flex; gap:8px;">
+        <button type="button" class="btn-primary" id="btnSaveCategory" style="padding: 11px; font-size: 13.5px;">Tambah Kategori</button>
+        <button type="button" class="btn-secondary" id="btnCancelEditCat" style="display:none; padding: 11px; font-size: 13.5px; width:auto; white-space:nowrap;">Batal</button>
+      </div>
+    </div>
+
+    <!-- Daftar Kategori Saat Ini -->
+    <div class="form-label" style="margin-bottom: 8px;">Daftar Kategori</div>
+    <div id="categoryListContainer" style="max-height: 200px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px;"></div>
+
+    <button type="button" class="btn-secondary" id="btnCloseCatManager">Selesai</button>
   </div>
 
   <!-- Bottom Sheet: Misi -->

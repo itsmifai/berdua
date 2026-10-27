@@ -615,6 +615,90 @@ body {
 .cat-kerja { background: #8FA3B8; }
 .cat-spesial { background: var(--amber); }
 
+/* ===== Kelola Kategori Agenda ===== */
+.cat-palette-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  padding: 4px 0;
+}
+
+.cat-color-choice {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2.5px solid transparent;
+  cursor: pointer;
+  transition: transform 0.15s, border-color 0.15s;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+}
+
+.cat-color-choice:hover {
+  transform: scale(1.1);
+}
+
+.cat-color-choice.selected {
+  border-color: var(--ink);
+  transform: scale(1.18);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+}
+
+.cat-manage-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  transition: background 0.15s;
+}
+
+.cat-manage-item .cat-item-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.cat-manage-item .cat-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.cat-manage-btn {
+  background: none;
+  border: none;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 5px 8px;
+  border-radius: 8px;
+  transition: background 0.15s;
+}
+
+.cat-manage-btn.edit {
+  color: var(--ink-soft);
+  background: var(--bg);
+}
+
+.cat-manage-btn.edit:hover {
+  color: var(--ink);
+}
+
+.cat-manage-btn.delete {
+  color: var(--terra);
+  background: rgba(226, 114, 91, 0.1);
+}
+
+.cat-manage-btn.delete:hover {
+  background: rgba(226, 114, 91, 0.2);
+}
+
 /* ===== Gift strip ===== */
 .gift-strip {
   display: flex;
