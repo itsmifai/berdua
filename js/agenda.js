@@ -3,7 +3,7 @@
 // ==============================================================================
 
 import { supabase, isSupabaseConfigured } from './supabaseClient.js';
-import { state } from './app.js';
+import { state, broadcastLiveSync } from './app.js';
 import { showToast, showConfirmModal } from './fx.js';
 
 export const MONTHS = [
@@ -589,6 +589,7 @@ function setupSheetHandlers() {
 
         showToast(id ? 'Agenda berhasil diperbarui' : 'Agenda baru disimpan');
         closeAgendaSheet();
+        broadcastLiveSync('agenda_sync');
         await loadAgendaEvents();
         selectedDate = date;
         const [y, m] = date.split('-').map(Number);
@@ -642,6 +643,7 @@ function setupSheetHandlers() {
 
       showToast('Agenda telah dihapus');
       closeAgendaSheet();
+      broadcastLiveSync('agenda_sync');
       await loadAgendaEvents();
       renderCalendar();
       renderDayList();
@@ -779,6 +781,7 @@ function renderCategoryList() {
       }
 
       await saveCategories();
+      broadcastLiveSync('categories_sync');
       renderCategoryList();
       renderCategoryChips();
       renderCalendarLegend();
@@ -855,6 +858,7 @@ function setupCategoryManagerHandlers() {
       }
 
       await saveCategories();
+      broadcastLiveSync('categories_sync');
       resetCategoryForm();
       renderCategoryList();
       renderCategoryChips();

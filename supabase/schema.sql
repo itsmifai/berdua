@@ -399,8 +399,16 @@ end;
 $$;
 
 -- ==============================================================================
--- REALTIME SUBSCRIPTIONS
+-- REALTIME SUBSCRIPTIONS & REPLICA IDENTITY (Full delete payload)
 -- ==============================================================================
+
+alter table mission_completions replica identity full;
+alter table agenda_events replica identity full;
+alter table missions replica identity full;
+alter table coupons replica identity full;
+alter table coupon_redemptions replica identity full;
+alter table profiles replica identity full;
+alter table agenda_categories replica identity full;
 
 alter publication supabase_realtime add table mission_completions;
 alter publication supabase_realtime add table agenda_events;

@@ -3,7 +3,7 @@
 // ==============================================================================
 
 import { supabase, isSupabaseConfigured } from './supabaseClient.js';
-import { state } from './app.js';
+import { state, broadcastLiveSync } from './app.js';
 import { showToast, launchConfetti, shakeElement, showConfirmModal } from './fx.js';
 import { updateXpDisplays } from './misi.js';
 
@@ -190,6 +190,8 @@ export async function handleRedeemCoupon(coupon, btn) {
   showToast(`Kupon didapat! −${coupon.price_xp} XP`);
 
   updateXpDisplays();
+  broadcastLiveSync('coupon_sync');
+  broadcastLiveSync('profile_sync', { userId: state.profile?.id, xp_balance: state.profile?.xp_balance });
   await loadCouponsData();
   renderRedemptions();
 }
@@ -386,6 +388,7 @@ function setupCouponSheetHandlers() {
 
         showToast('Kupon hadiah berhasil dihapus');
         closeCouponSheet();
+        broadcastLiveSync('coupon_sync');
         await loadCouponsData();
         renderCoupons();
         renderGiftStrip();
@@ -458,6 +461,7 @@ function setupCouponSheetHandlers() {
 
         showToast(id ? 'Kupon berhasil diperbarui!' : 'Kupon hadiah baru berhasil dibuat!');
         closeCouponSheet();
+        broadcastLiveSync('coupon_sync');
         await loadCouponsData();
         renderCoupons();
         renderGiftStrip();

@@ -3,10 +3,10 @@
 // ==============================================================================
 
 import { supabase, isSupabaseConfigured } from './supabaseClient.js';
-import { state } from './app.js';
+import { state, broadcastLiveSync, renderUserHeader } from './app.js';
 import { showToast, launchConfetti, hopElement, showConfirmModal } from './fx.js';
 import { formatDateKey } from './agenda.js';
-import { loadStreakData, loadWeeklyLeaderboard } from './streak.js';
+import { streakState, renderWeeklyDuel, renderStreakCard, loadStreakData, loadWeeklyLeaderboard } from './streak.js';
 
 export const DIFFICULTY_XP = {
   easy: 10,
@@ -56,31 +56,31 @@ export async function loadMissionsData() {
 
   const todayStr = formatDateKey(new Date());
 
-  // 1. Ambil misi aktif
-  const { data: missions, error: mErr } = await supabase
-    .from('missions')
-    .select('*')
-    .eq('couple_id', state.profile.couple_id)
-    .eq('is_active', true)
-    .order('created_at', { ascending: false });
+  // 1. Ambil misi aktif dan penyelesaian hari ini secara PARALEL (cepat)
+  const [mRes, cRes] = await Promise.all([
+    supabase
+      .from('missions')
+      .select('*')
+      .eq('couple_id', state.profile.couple_id)
+      .eq('is_active', true)
+      .order('created_at', { ascending: false }),
+    supabase
+      .from('mission_completions')
+      .select('*')
+      .eq('couple_id', state.profile.couple_id)
+      .eq('completed_on', todayStr)
+  ]);
 
-  if (mErr) {
-    console.error('Error load missions:', mErr);
+  if (mRes.error) {
+    console.error('Error load missions:', mRes.error);
   } else {
-    allMissions = missions || [];
+    allMissions = mRes.data || [];
   }
 
-  // 2. Ambil penyelesaian hari ini
-  const { data: completions, error: cErr } = await supabase
-    .from('mission_completions')
-    .select('*')
-    .eq('couple_id', state.profile.couple_id)
-    .eq('completed_on', todayStr);
-
-  if (cErr) {
-    console.error('Error load completions:', cErr);
+  if (cRes.error) {
+    console.error('Error load completions:', cRes.error);
   } else {
-    todayCompletions = completions || [];
+    todayCompletions = cRes.data || [];
   }
 
   updateHeaderActiveTicks();
@@ -279,16 +279,23 @@ export async function toggleMission(missionId, checkBtn) {
     // 1. Eksekusi instan di memori (0ms delay)
     const prevCompletions = [...todayCompletions];
     const prevXp = state.profile.xp_balance || 0;
+    const prevWeekXp = streakState.myWeekXp || 0;
 
     todayCompletions = todayCompletions.filter(c => c.id !== existingCompletion.id);
     state.profile.xp_balance = Math.max(0, prevXp - xp);
+    streakState.myWeekXp = Math.max(0, prevWeekXp - xp);
 
     // Refresh UI seketika
     updateXpDisplays();
     renderTodayMissions();
     renderAllMissions();
+    renderWeeklyDuel();
     updateHeaderActiveTicks();
+    renderStreakCard();
     showToast('Batal selesai — XP disesuaikan');
+
+    // Broadcast INSTAN ke pasangan (sub-50ms)
+    broadcastLiveSync('mission_uncheck', { missionId, userId: myId, xp });
 
     // 2. Kirim update ke DB di latar belakang
     supabase
@@ -301,10 +308,13 @@ export async function toggleMission(missionId, checkBtn) {
           // Kembalikan state jika gagal di server
           todayCompletions = prevCompletions;
           state.profile.xp_balance = prevXp;
+          streakState.myWeekXp = prevWeekXp;
           updateXpDisplays();
           renderTodayMissions();
           renderAllMissions();
+          renderWeeklyDuel();
           updateHeaderActiveTicks();
+          renderStreakCard();
           showToast('Gagal membatalkan misi di server');
         } else {
           loadStreakData();
@@ -327,15 +337,19 @@ export async function toggleMission(missionId, checkBtn) {
 
     const prevCompletions = [...todayCompletions];
     const prevXp = state.profile.xp_balance || 0;
+    const prevWeekXp = streakState.myWeekXp || 0;
 
     todayCompletions.push(optimisticCompletion);
     state.profile.xp_balance = prevXp + xp;
+    streakState.myWeekXp = prevWeekXp + xp;
 
     // Refresh UI seketika
     updateXpDisplays();
     renderTodayMissions();
     renderAllMissions();
+    renderWeeklyDuel();
     updateHeaderActiveTicks();
+    renderStreakCard();
 
     // Animasi Confetti, Hop, & Cheers Toast INSTAN!
     launchConfetti(checkBtn);
@@ -343,6 +357,14 @@ export async function toggleMission(missionId, checkBtn) {
     hopElement(avMe);
     const randomCheer = CHEERS[Math.floor(Math.random() * CHEERS.length)];
     showToast(`+${xp} XP — ${randomCheer}`);
+
+    // Broadcast INSTAN ke pasangan (sub-50ms)
+    broadcastLiveSync('mission_check', {
+      missionId,
+      userId: myId,
+      xp,
+      completion: optimisticCompletion
+    });
 
     // 2. Kirim insert ke DB di latar belakang
     supabase
@@ -362,10 +384,13 @@ export async function toggleMission(missionId, checkBtn) {
           // Kembalikan state jika gagal
           todayCompletions = prevCompletions;
           state.profile.xp_balance = prevXp;
+          streakState.myWeekXp = prevWeekXp;
           updateXpDisplays();
           renderTodayMissions();
           renderAllMissions();
+          renderWeeklyDuel();
           updateHeaderActiveTicks();
+          renderStreakCard();
           showToast('Gagal mencatat misi di server');
         } else if (data) {
           const idx = todayCompletions.findIndex(c => c.id === tempId);
@@ -375,6 +400,58 @@ export async function toggleMission(missionId, checkBtn) {
         }
       });
   }
+}
+
+/**
+ * Terapkan centang / uncentang dari pasangan secara INSTAN (Live Broadcast)
+ */
+export function applyRemoteMissionToggle(missionId, userId, xp, isDone, completion) {
+  const todayStr = formatDateKey(new Date());
+
+  if (isDone) {
+    const exists = todayCompletions.some(c => c.mission_id === missionId && c.user_id === userId);
+    if (!exists) {
+      todayCompletions.push(completion || {
+        id: 'remote-' + Date.now(),
+        couple_id: state.profile?.couple_id,
+        mission_id: missionId,
+        user_id: userId,
+        xp_awarded: xp,
+        completed_on: todayStr
+      });
+    }
+    streakState.partnerWeekXp = (streakState.partnerWeekXp || 0) + xp;
+    if (state.partner) {
+      state.partner.xp_balance = (state.partner.xp_balance || 0) + xp;
+    }
+  } else {
+    todayCompletions = todayCompletions.filter(c => !(c.mission_id === missionId && c.user_id === userId));
+    streakState.partnerWeekXp = Math.max(0, (streakState.partnerWeekXp || 0) - xp);
+    if (state.partner) {
+      state.partner.xp_balance = Math.max(0, (state.partner.xp_balance || 0) - xp);
+    }
+  }
+
+  // Refresh UI seketika (0ms)
+  renderTodayMissions();
+  renderAllMissions();
+  renderWeeklyDuel();
+  updateHeaderActiveTicks();
+  renderStreakCard();
+  renderUserHeader(state.profile);
+
+  // Background sync paralel untuk pastikan tidak ada divergensi data
+  Promise.allSettled([
+    loadMissionsData(),
+    loadWeeklyLeaderboard(),
+    loadStreakData()
+  ]).then(() => {
+    renderTodayMissions();
+    renderAllMissions();
+    renderWeeklyDuel();
+    updateHeaderActiveTicks();
+    renderStreakCard();
+  });
 }
 
 /**
@@ -551,6 +628,7 @@ function setupMissionSheetHandlers() {
 
         showToast(id ? 'Misi berhasil diperbarui' : 'Misi baru ditambahkan!');
         closeMissionSheet();
+        broadcastLiveSync('missions_sync');
         await loadMissionsData();
         renderTodayMissions();
         renderAllMissions();
@@ -599,6 +677,7 @@ function setupMissionSheetHandlers() {
 
       showToast('Misi telah dihapus');
       closeMissionSheet();
+      broadcastLiveSync('missions_sync');
       await loadMissionsData();
       renderTodayMissions();
       renderAllMissions();

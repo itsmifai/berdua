@@ -6,8 +6,8 @@ import { requireAuth, getCurrentProfile, logout } from './auth.js';
 import { showToast, showConfirmModal } from './fx.js';
 import { supabase, isSupabaseConfigured } from './supabaseClient.js';
 import { initAgenda, loadAgendaEvents, renderCalendar, renderDayList, renderUpcomingAgenda, loadCategories, renderCategoryChips } from './agenda.js';
-import { initMisi, loadMissionsData, renderTodayMissions, renderAllMissions } from './misi.js';
-import { initStreak, loadStreakData, loadWeeklyLeaderboard } from './streak.js';
+import { initMisi, loadMissionsData, renderTodayMissions, renderAllMissions, updateHeaderActiveTicks, applyRemoteMissionToggle } from './misi.js';
+import { initStreak, loadStreakData, loadWeeklyLeaderboard, renderWeeklyDuel } from './streak.js';
 import { initPoin, loadCouponsData, renderCoupons, renderGiftStrip, renderRedemptions } from './poin.js';
 import { initProfil, loadProfilStats } from './profil.js';
 
@@ -193,9 +193,86 @@ export function renderUserHeader(profile) {
 }
 
 /* ==============================================================================
-   SUPABASE REALTIME SUBSCRIPTIONS (Fase 6)
+   SUPABASE REALTIME & BROADCAST SUBSCRIPTIONS (Fase 6)
    ============================================================================== */
 let activeRealtimeChannel = null;
+
+/**
+ * Kirim event sinkronisasi instan via WebSocket Broadcast (sub-50ms latency)
+ */
+export function broadcastLiveSync(type, payload = {}) {
+  if (activeRealtimeChannel) {
+    try {
+      activeRealtimeChannel.send({
+        type: 'broadcast',
+        event: 'sync',
+        payload: { type, ...payload }
+      });
+    } catch (e) {
+      console.warn('Gagal broadcast live sync:', e);
+    }
+  }
+}
+
+/**
+ * Tangani payload broadcast yang diterima dari pasangan secara instan
+ */
+export function handleLiveBroadcast(data) {
+  if (!data || !data.type) return;
+
+  switch (data.type) {
+    case 'mission_check':
+      if (data.userId === state.partner?.id) {
+        applyRemoteMissionToggle(data.missionId, data.userId, data.xp, true, data.completion);
+      }
+      break;
+
+    case 'mission_uncheck':
+      if (data.userId === state.partner?.id) {
+        applyRemoteMissionToggle(data.missionId, data.userId, data.xp, false);
+      }
+      break;
+
+    case 'missions_sync':
+      loadMissionsData().then(() => {
+        renderTodayMissions();
+        renderAllMissions();
+      });
+      break;
+
+    case 'agenda_sync':
+      loadAgendaEvents().then(() => {
+        renderCalendar();
+        renderDayList();
+        renderUpcomingAgenda();
+      });
+      break;
+
+    case 'categories_sync':
+      loadCategories().then(() => {
+        renderCategoryChips();
+        renderCalendar();
+        renderDayList();
+        renderUpcomingAgenda();
+      });
+      break;
+
+    case 'coupon_sync':
+      loadCouponsData().then(() => {
+        renderCoupons();
+        renderGiftStrip();
+        renderRedemptions();
+      });
+      break;
+
+    case 'profile_sync':
+      if (data.userId === state.partner?.id && data.xp_balance !== undefined) {
+        if (state.partner) state.partner.xp_balance = data.xp_balance;
+        renderUserHeader(state.profile);
+      }
+      break;
+  }
+}
 
 export function setupRealtimeSubscriptions() {
   const coupleId = state.profile?.couple_id;
@@ -205,43 +282,57 @@ export function setupRealtimeSubscriptions() {
     try { supabase.removeChannel(activeRealtimeChannel); } catch (_) {}
   }
 
-  activeRealtimeChannel = supabase.channel(`couple-live-${coupleId}`)
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'mission_completions', filter: `couple_id=eq.${coupleId}` }, async () => {
-      await loadMissionsData();
+  activeRealtimeChannel = supabase.channel(`couple-live-${coupleId}`, {
+    config: {
+      broadcast: { ack: false }
+    }
+  })
+    // 1. BROADCAST PEER-TO-PEER INSTAN (Sub-50ms)
+    .on('broadcast', { event: 'sync' }, ({ payload }) => {
+      handleLiveBroadcast(payload);
+    })
+    // 2. POSTGRES CHANGES (Reliable Persistence & Fallback)
+    // Filter couple_id dilepas agar event DELETE tidak di-drop saat replica identity default
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'mission_completions' }, async () => {
+      await Promise.allSettled([
+        loadMissionsData(),
+        loadStreakData(),
+        loadWeeklyLeaderboard(),
+        loadProfilStats()
+      ]);
       renderTodayMissions();
       renderAllMissions();
-      await loadStreakData();
-      await loadWeeklyLeaderboard();
-      await loadProfilStats();
+      renderWeeklyDuel();
+      updateHeaderActiveTicks();
     })
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'agenda_events', filter: `couple_id=eq.${coupleId}` }, async () => {
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'agenda_events' }, async () => {
       await loadAgendaEvents();
       renderCalendar();
       renderDayList();
       renderUpcomingAgenda();
     })
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'agenda_categories', filter: `couple_id=eq.${coupleId}` }, async () => {
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'agenda_categories' }, async () => {
       await loadCategories();
       renderCategoryChips();
       renderCalendar();
       renderDayList();
       renderUpcomingAgenda();
     })
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'missions', filter: `couple_id=eq.${coupleId}` }, async () => {
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'missions' }, async () => {
       await loadMissionsData();
       renderTodayMissions();
       renderAllMissions();
     })
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'coupons', filter: `couple_id=eq.${coupleId}` }, async () => {
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'coupons' }, async () => {
       await loadCouponsData();
       renderCoupons();
       renderGiftStrip();
     })
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'coupon_redemptions', filter: `couple_id=eq.${coupleId}` }, async () => {
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'coupon_redemptions' }, async () => {
       await loadCouponsData();
       renderRedemptions();
     })
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles', filter: `couple_id=eq.${coupleId}` }, async (payload) => {
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, async (payload) => {
       if (payload.new?.id === state.profile?.id) {
         state.profile = { ...state.profile, ...payload.new };
         renderUserHeader(state.profile);
