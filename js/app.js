@@ -4,12 +4,12 @@
 
 import { requireAuth, getCurrentProfile, logout } from './auth.js';
 import { showToast } from './fx.js';
-import { isSupabaseConfigured } from './supabaseClient.js';
-import { initAgenda } from './agenda.js';
-import { initMisi } from './misi.js';
-import { initStreak } from './streak.js';
-import { initPoin } from './poin.js';
-import { initProfil } from './profil.js';
+import { supabase, isSupabaseConfigured } from './supabaseClient.js';
+import { initAgenda, loadAgendaEvents, renderCalendar, renderDayList, renderUpcomingAgenda } from './agenda.js';
+import { initMisi, loadMissionsData, renderTodayMissions, renderAllMissions } from './misi.js';
+import { initStreak, loadStreakData, loadWeeklyLeaderboard } from './streak.js';
+import { initPoin, loadCouponsData, renderCoupons, renderGiftStrip, renderRedemptions } from './poin.js';
+import { initProfil, loadProfilStats } from './profil.js';
 
 // State Global Aplikasi
 export const state = {
@@ -119,7 +119,13 @@ async function init() {
   // 8. Inisialisasi Fitur Profil & Statistik (Fase 5)
   await initProfil();
 
-  // 9. Global Backdrop Sheet Close Handler
+  // 9. Aktifkan Supabase Realtime Sinkronisasi Dua Arah (Fase 6)
+  setupRealtimeSubscriptions();
+
+  // 10. Registrasi Service Worker PWA (Fase 6)
+  registerPwaServiceWorker();
+
+  // 11. Global Backdrop Sheet Close Handler
   const backdrop = document.getElementById('sheetBackdrop');
   if (backdrop) {
     backdrop.addEventListener('click', () => {
@@ -154,6 +160,74 @@ function renderUserHeader(profile) {
 
   const vsNameMe = document.getElementById('vs-name-me');
   if (vsNameMe) vsNameMe.textContent = profile.display_name;
+
+  if (profile.partner) {
+    const labelYou = document.getElementById('label-you');
+    if (labelYou) labelYou.textContent = profile.partner.display_name;
+    const vsNameYou = document.getElementById('vs-name-you');
+    if (vsNameYou) vsNameYou.textContent = profile.partner.display_name;
+  }
+}
+
+/* ==============================================================================
+   SUPABASE REALTIME SUBSCRIPTIONS (Fase 6)
+   ============================================================================== */
+export function setupRealtimeSubscriptions() {
+  const coupleId = state.profile?.couple_id;
+  if (!coupleId || !isSupabaseConfigured()) return;
+
+  supabase.channel(`couple-live-${coupleId}`)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'mission_completions', filter: `couple_id=eq.${coupleId}` }, async () => {
+      await loadMissionsData();
+      renderTodayMissions();
+      renderAllMissions();
+      await loadStreakData();
+      await loadWeeklyLeaderboard();
+      await loadProfilStats();
+    })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'agenda_events', filter: `couple_id=eq.${coupleId}` }, async () => {
+      await loadAgendaEvents();
+      renderCalendar();
+      renderDayList();
+      renderUpcomingAgenda();
+    })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'missions', filter: `couple_id=eq.${coupleId}` }, async () => {
+      await loadMissionsData();
+      renderTodayMissions();
+      renderAllMissions();
+    })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'coupons', filter: `couple_id=eq.${coupleId}` }, async () => {
+      await loadCouponsData();
+      renderCoupons();
+      renderGiftStrip();
+    })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'coupon_redemptions', filter: `couple_id=eq.${coupleId}` }, async () => {
+      await loadCouponsData();
+      renderRedemptions();
+    })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles', filter: `couple_id=eq.${coupleId}` }, async (payload) => {
+      if (payload.new?.id === state.profile?.id) {
+        state.profile = { ...state.profile, ...payload.new };
+        renderUserHeader(state.profile);
+      } else if (state.partner && payload.new?.id === state.partner?.id) {
+        state.partner = { ...state.partner, ...payload.new };
+        renderUserHeader(state.profile);
+      }
+    })
+    .subscribe();
+}
+
+/* ==============================================================================
+   SERVICE WORKER PWA REGISTRATION (Fase 6)
+   ============================================================================== */
+function registerPwaServiceWorker() {
+  if ('serviceWorker' in navigator && (window.location.protocol === 'https:' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./sw.js')
+        .then(() => console.log('Berdua PWA Service Worker aktif'))
+        .catch(err => console.warn('Gagal registrasi SW:', err));
+    });
+  }
 }
 
 // Jalankan aplikasi saat DOM siap

@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <rect width="512" height="512" rx="128" fill="#FAF5EE"/>
+  <g transform="translate(136, 96) scale(2.8)">
+    <defs>
+      <linearGradient id="pwa-fg1" x1="42" y1="4" x2="42" y2="94" gradientUnits="userSpaceOnUse">
+        <stop stop-color="#F5A623"/>
+        <stop offset="1" stop-color="#E2725B"/>
+      </linearGradient>
+      <linearGradient id="pwa-fg2" x1="42" y1="50" x2="42" y2="86" gradientUnits="userSpaceOnUse">
+        <stop stop-color="#FFD98A"/>
+        <stop offset="1" stop-color="#F5A623"/>
+      </linearGradient>
+    </defs>
+    <!-- Outer flame -->
+    <path d="M42 4C42 4 54 22 54 34C54 40 50 44 46 44C42 44 39 41 39 37C39 33 41 30 41 30C41 30 30 38 26 52C24 59 25 66 28 72C22 70 17 64 15 57C13 62 12 68 13 74C15 86 27 94 42 94C57 94 70 85 71 71C72 52 58 42 52 30C48 22 42 4 42 4Z" fill="url(#pwa-fg1)"/>
+    <!-- Inner flame -->
+    <path d="M42 50C42 50 52 62 52 72C52 81 47 86 42 86C37 86 32 81 32 72C32 62 42 50 42 50Z" fill="url(#pwa-fg2)"/>
+    <!-- Eyes -->
+    <ellipse cx="34" cy="66" rx="5.5" ry="7" fill="#fff"/>
+    <ellipse cx="50" cy="66" rx="5.5" ry="7" fill="#fff"/>
+    <circle cx="35.2" cy="67.5" r="2.8" fill="#5B3A16"/>
+    <circle cx="51.2" cy="67.5" r="2.8" fill="#5B3A16"/>
+    <!-- Smile -->
+    <path d="M37 78 Q42 83 47 78" stroke="#5B3A16" stroke-width="2.6" fill="none" stroke-linecap="round"/>
+    <!-- Cheeks -->
+    <ellipse cx="26" cy="74" rx="3.6" ry="2.4" fill="#fff" opacity="0.5"/>
+    <ellipse cx="58" cy="74" rx="3.6" ry="2.4" fill="#fff" opacity="0.5"/>
+  </g>
+</svg>
