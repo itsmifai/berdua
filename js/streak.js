@@ -124,13 +124,16 @@ async function calculateStreakFallback(coupleId) {
 }
 
 /**
- * Render Kartu Api Bersama (3 kondisi status)
+ * Render Kartu Api Bersama (3 kondisi status api & pembedaan maskot)
  */
 export function renderStreakCard() {
   const flameCard = document.getElementById('flameCard');
   const streakCount = document.getElementById('streak-count');
   const streakStatus = document.getElementById('streakStatus');
   const pillStreak = document.getElementById('pill-streak');
+  const flameCharSvg = document.getElementById('flameCharSvg');
+  const mascotLeft = document.getElementById('mascotLeft');
+  const mascotRight = document.getElementById('mascotRight');
 
   if (pillStreak) pillStreak.textContent = streakState.currentStreak;
   if (streakCount) streakCount.innerHTML = `${streakState.currentStreak} <span>hari</span>`;
@@ -141,24 +144,58 @@ export function renderStreakCard() {
   const partnerDoneToday = document.getElementById('av-you')?.classList.contains('active');
   const partnerName = state.partner?.display_name || 'Dia';
 
+  // 1. BEDAKAN VISUAL KARAKTER DUA BLOB (SUDAH vs BELUM SELESAI MISI HARI INI)
+  if (mascotLeft) {
+    if (myDoneToday) {
+      mascotLeft.classList.add('done');
+      mascotLeft.classList.remove('pending');
+      mascotLeft.querySelector('svg').innerHTML = '<use href="#blob"/>';
+    } else {
+      mascotLeft.classList.add('pending');
+      mascotLeft.classList.remove('done');
+      mascotLeft.querySelector('svg').innerHTML = '<use href="#blob"/>';
+    }
+  }
+
+  if (mascotRight) {
+    if (partnerDoneToday) {
+      mascotRight.classList.add('done');
+      mascotRight.classList.remove('pending');
+      mascotRight.querySelector('svg').innerHTML = '<use href="#blob"/>';
+    } else {
+      mascotRight.classList.add('pending');
+      mascotRight.classList.remove('done');
+      mascotRight.querySelector('svg').innerHTML = '<use href="#blob"/>';
+    }
+  }
+
+  // 2. TIGA KONDISI API: BERKOBAR (flame-on), MEMBARA (flame-warm), PADAM (flame-off)
+  flameCard.classList.remove('flame-on', 'flame-warm', 'flame-off', 'at-risk');
+
   if (streakState.isTodayDone) {
-    // KONDISI 1: Berdua sudah tuntas hari ini
-    flameCard.classList.remove('at-risk');
-    streakStatus.textContent = 'Api kalian menyala!';
-  } else if (streakState.isAtRisk && !myDoneToday && !partnerDoneToday) {
-    // KONDISI 2: Belum ada yang selesai & kemarin menyala (At Risk)
-    flameCard.classList.add('at-risk');
-    streakStatus.textContent = 'Ayo selamatkan api kalian!';
-  } else {
-    // KONDISI 3: Satu selesai, satu lagi belum
-    flameCard.classList.remove('at-risk');
+    // KONDISI 1: BERDUA TUNTAS -> API BERKOBAR PENUH!
+    flameCard.classList.add('flame-on');
+    streakStatus.textContent = 'Api kalian berkobar bersama!';
+    if (flameCharSvg) flameCharSvg.innerHTML = '<use href="#flamechar"/>';
+  } else if (myDoneToday || partnerDoneToday) {
+    // KONDISI 2: SATU ORANG TUNTAS -> API MEMBARA HANGAT (Tinggal 1 lagi)
+    flameCard.classList.add('flame-warm');
     if (myDoneToday && !partnerDoneToday) {
       streakStatus.textContent = `Tinggal ${partnerName} lagi hari ini!`;
-    } else if (!myDoneToday && partnerDoneToday) {
-      streakStatus.textContent = 'Tinggal Kamu lagi hari ini!';
     } else {
-      streakStatus.textContent = 'Selesaikan misi berdua hari ini!';
+      streakStatus.textContent = 'Tinggal Kamu lagi hari ini!';
     }
+    if (flameCharSvg) flameCharSvg.innerHTML = '<use href="#flamechar"/>';
+  } else {
+    // KONDISI 3: BELUM ADA YANG TUNTAS -> API PADAM / TIDUR NYENYAK
+    flameCard.classList.add('flame-off');
+    if (streakState.isAtRisk) {
+      flameCard.classList.add('at-risk');
+      streakStatus.textContent = 'Ayo selamatkan api kalian!';
+    } else {
+      streakStatus.textContent = 'Api padam — selesaikan misi berdua!';
+    }
+    if (flameCharSvg) flameCharSvg.innerHTML = '<use href="#flamechar-sleeping"/>';
   }
 }
 
@@ -198,7 +235,7 @@ export async function loadWeeklyLeaderboard() {
 }
 
 /**
- * Render Kartu Duel VS Mingguan & Mahkota
+ * Render Kartu Duel VS Mingguan & Ekspresi Karakter (Memimpin, Ketinggalan, Seri)
  */
 export function renderWeeklyDuel() {
   const lbMe = document.getElementById('lb-me');
@@ -208,6 +245,9 @@ export function renderWeeklyDuel() {
   const lbCaption = document.getElementById('lb-caption');
   const vsMe = document.getElementById('vs-me');
   const vsYou = document.getElementById('vs-you');
+  const vsMid = document.getElementById('vs-mid');
+  const mascotMe = document.getElementById('vs-mascot-me');
+  const mascotYou = document.getElementById('vs-mascot-you');
 
   const myXp = streakState.myWeekXp;
   const youXp = streakState.partnerWeekXp;
@@ -233,20 +273,43 @@ export function renderWeeklyDuel() {
 
   if (!vsMe || !vsYou || !lbCaption) return;
 
+  // Reset classes
+  vsMe.classList.remove('leading', 'trailing', 'draw');
+  vsYou.classList.remove('leading', 'trailing', 'draw');
+
   if (myXp > youXp) {
-    lbCaption.textContent = 'Kamu memimpin! Jangan kasih kendor!';
+    // 1. KAMU MEMIMPIN (Memakai Mahkota, Dia Keringat Dingin)
+    lbCaption.textContent = `Kamu memimpin unggul +${myXp - youXp} XP! Jangan kasih kendor!`;
     vsMe.classList.add('leading');
-    vsYou.classList.remove('leading');
+    vsYou.classList.add('trailing');
     vsMe.querySelector('.mascot-big')?.insertAdjacentHTML('afterbegin', crownSvg);
+
+    if (mascotMe) mascotMe.querySelector('svg').innerHTML = '<use href="#blob"/>';
+    if (mascotYou) mascotYou.querySelector('svg').innerHTML = '<use href="#blob-worried"/>';
+    if (vsMid) vsMid.innerHTML = 'VS';
+
   } else if (youXp > myXp) {
-    lbCaption.textContent = `Tertinggal ${youXp - myXp} XP — salip dia!`;
+    // 2. DIA MEMIMPIN (Dia Memakai Mahkota, Kamu Keringat Dingin)
+    lbCaption.textContent = `Tertinggal ${youXp - myXp} XP — yuk salip dia!`;
     vsYou.classList.add('leading');
-    vsMe.classList.remove('leading');
+    vsMe.classList.add('trailing');
     vsYou.querySelector('.mascot-big')?.insertAdjacentHTML('afterbegin', crownSvg);
+
+    if (mascotYou) mascotYou.querySelector('svg').innerHTML = '<use href="#blob"/>';
+    if (mascotMe) mascotMe.querySelector('svg').innerHTML = '<use href="#blob-worried"/>';
+    if (vsMid) vsMid.innerHTML = 'VS';
+
   } else {
-    lbCaption.textContent = 'Seri! Siapa duluan hari ini?';
-    vsMe.classList.remove('leading');
-    vsYou.classList.remove('leading');
+    // 3. SKOR DRAW / SERI (Kedua Maskot Memakai Kacamata Keren 😎)
+    lbCaption.textContent = myXp > 0
+      ? `Skor seimbang (${myXp} XP)! Siapa duluan yang bakal unggul?`
+      : 'Duel mingguan dimulai! Selesaikan misi untuk poin pertama!';
+    vsMe.classList.add('draw');
+    vsYou.classList.add('draw');
+
+    if (mascotMe) mascotMe.querySelector('svg').innerHTML = '<use href="#blob-cool"/>';
+    if (mascotYou) mascotYou.querySelector('svg').innerHTML = '<use href="#blob-cool"/>';
+    if (vsMid) vsMid.innerHTML = '<span class="vs-draw-badge">🤝 SERI</span>';
   }
 }
 
