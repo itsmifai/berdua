@@ -24,28 +24,40 @@ export async function getCurrentProfile() {
   const session = await getSession();
   if (!session?.user) return null;
 
+  console.log('[Profile] Fetching profile for user ID:', session.user.id);
+
+  // Coba ambil profil pengguna saat ini
   const { data: profile, error } = await supabase
     .from('profiles')
-    .select('*, couples(*)')
+    .select('*')
     .eq('id', session.user.id)
-    .single();
+    .maybeSingle();
 
   if (error) {
-    console.error('Error fetching profile:', error);
+    console.error('[Profile] Error fetch profile:', error.message, error.details);
     return null;
   }
+
+  if (!profile) {
+    console.warn('[Profile] Profil belum ada di DB untuk UID:', session.user.id, '. Pastikan seed.sql sudah dijalankan!');
+    return null;
+  }
+
+  console.log('[Profile] Berhasil load:', profile.display_name, '| couple_id:', profile.couple_id);
 
   // Ambil profil pasangan bila couple_id ada
   let partner = null;
   if (profile.couple_id) {
-    const { data: partnerData } = await supabase
+    const { data: partnerData, error: pErr } = await supabase
       .from('profiles')
       .select('*')
       .eq('couple_id', profile.couple_id)
       .neq('id', profile.id)
       .maybeSingle();
 
+    if (pErr) console.warn('[Profile] Gagal fetch partner:', pErr.message);
     partner = partnerData;
+    console.log('[Profile] Partner:', partner?.display_name || 'tidak ditemukan');
   }
 
   return { ...profile, partner };
@@ -118,7 +130,7 @@ export async function requireAuth() {
 }
 
 /**
- * Session Guard untuk login.html: Lempar ke index.html jika sudah login
+ * Session Guard untuk login.html: Lempar ke index.html hanya jika sudah login DAN punya profil valid
  */
 export async function redirectIfAuth() {
   if (!isSupabaseConfigured()) {
@@ -127,8 +139,14 @@ export async function redirectIfAuth() {
   const session = await getSession();
   console.log('[Auth] redirectIfAuth - Session:', session ? `Ada (${session.user?.email})` : 'Tidak ada');
   if (session) {
-    window.location.href = 'index.html';
-    return true;
+    const profile = await getCurrentProfile();
+    if (profile && profile.couple_id) {
+      window.location.href = 'index.html';
+      return true;
+    } else {
+      console.warn('[Auth] Session aktif tapi profil belum diset di Supabase. Tidak auto-redirect.');
+      return false;
+    }
   }
   return false;
 }

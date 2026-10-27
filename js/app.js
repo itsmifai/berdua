@@ -101,10 +101,10 @@ async function init() {
     // 3. Ambil data profil user + partner
     const profile = await getCurrentProfile();
     if (!profile || !profile.couple_id) {
-      // Sudah auth tapi belum punya profil/couple — arahkan ke login
       console.error('Profil atau couple_id tidak ditemukan. Pastikan seed sudah dijalankan.');
-      showToast('Data profil tidak ditemukan. Hubungi admin.');
-      setTimeout(() => { window.location.href = 'login.html'; }, 2000);
+      endSplash();
+      showToast('Data profil belum terdaftar di database.');
+      showProfileMissingScreen(session.user);
       return;
     }
 
@@ -240,5 +240,32 @@ function registerPwaServiceWorker() {
   }
 }
 
+function showProfileMissingScreen(user) {
+  const views = document.getElementById('views');
+  if (views) {
+    views.innerHTML = `
+      <div style="padding: 40px 20px; text-align: center;">
+        <div style="font-family:'Fraunces',serif; font-size: 22px; font-weight:600; margin-bottom: 12px; color: var(--terra);">Ruang Belum Siap</div>
+        <p style="font-size: 13.5px; color: var(--ink-soft); line-height: 1.5; margin-bottom: 20px;">
+          Akun <b>${user.email || 'kamu'}</b> berhasil masuk, tetapi profil belum terdaftar di tabel <code>profiles</code> database.
+        </p>
+        <div style="background: var(--card); border: 1.5px dashed var(--line); border-radius: 16px; padding: 14px; margin-bottom: 20px; text-align: left;">
+          <div style="font-size: 11px; font-weight:700; color:var(--ink-soft); text-transform:uppercase; margin-bottom:4px;">UID Akun Anda:</div>
+          <div style="font-family: monospace; font-size: 12px; word-break: break-all; color: var(--ink); user-select: all;">${user.id}</div>
+        </div>
+        <p style="font-size: 12px; color: var(--ink-soft); line-height: 1.5; margin-bottom: 24px;">
+          Salin UID di atas, lalu pastikan sudah dimasukkan ke variabel <code>v_user1_id</code> / <code>v_user2_id</code> di <code>supabase/seed.sql</code> dan dijalankan di SQL Editor Supabase.
+        </p>
+        <button id="btnMissingLogout" class="btn-primary" style="max-width: 200px; margin: 0 auto;">Keluar Akun</button>
+      </div>
+    `;
+    document.getElementById('btnMissingLogout')?.addEventListener('click', () => logout());
+  }
+}
+
 // Jalankan aplikasi saat DOM siap
-document.addEventListener('DOMContentLoaded', init);
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', init);
+} else {
+  init();
+}
