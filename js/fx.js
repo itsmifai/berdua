@@ -86,3 +86,96 @@ export function shakeElement(el) {
   el.classList.add('shake');
   setTimeout(() => el.classList.remove('shake'), 450);
 }
+
+/**
+ * Menampilkan modal konfirmasi custom in-app (menggantikan window.confirm)
+ * @returns {Promise<boolean>} Resolves true jika user konfirmasi, false jika batal
+ */
+export function showConfirmModal({
+  title = 'Konfirmasi',
+  message = '',
+  confirmText = 'Ya, Lanjutkan',
+  cancelText = 'Batal',
+  isDanger = true
+} = {}) {
+  return new Promise((resolve) => {
+    document.querySelectorAll('.modal-backdrop').forEach(m => m.remove());
+
+    const backdrop = document.createElement('div');
+    backdrop.className = 'modal-backdrop';
+
+    backdrop.innerHTML = `
+      <div class="modal-card">
+        <div class="modal-title">${escapeModalText(title)}</div>
+        <div class="modal-message">${escapeModalText(message)}</div>
+        <div class="modal-actions">
+          <button type="button" class="modal-btn-cancel">${escapeModalText(cancelText)}</button>
+          <button type="button" class="modal-btn-confirm ${isDanger ? 'is-danger' : ''}">${escapeModalText(confirmText)}</button>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(backdrop);
+    requestAnimationFrame(() => backdrop.classList.add('active'));
+
+    const cleanup = (result) => {
+      backdrop.classList.remove('active');
+      setTimeout(() => backdrop.remove(), 250);
+      resolve(result);
+    };
+
+    backdrop.querySelector('.modal-btn-confirm').addEventListener('click', () => cleanup(true));
+    backdrop.querySelector('.modal-btn-cancel').addEventListener('click', () => cleanup(false));
+    backdrop.addEventListener('click', (e) => {
+      if (e.target === backdrop) cleanup(false);
+    });
+  });
+}
+
+/**
+ * Menampilkan modal pemberitahuan custom in-app (menggantikan window.alert)
+ * @returns {Promise<void>} Resolves saat ditutup
+ */
+export function showAlertModal({
+  title = 'Pemberitahuan',
+  message = '',
+  okText = 'Mengerti'
+} = {}) {
+  return new Promise((resolve) => {
+    document.querySelectorAll('.modal-backdrop').forEach(m => m.remove());
+
+    const backdrop = document.createElement('div');
+    backdrop.className = 'modal-backdrop';
+
+    backdrop.innerHTML = `
+      <div class="modal-card">
+        <div class="modal-title">${escapeModalText(title)}</div>
+        <div class="modal-message">${escapeModalText(message)}</div>
+        <div class="modal-actions">
+          <button type="button" class="modal-btn-confirm">${escapeModalText(okText)}</button>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(backdrop);
+    requestAnimationFrame(() => backdrop.classList.add('active'));
+
+    const cleanup = () => {
+      backdrop.classList.remove('active');
+      setTimeout(() => backdrop.remove(), 250);
+      resolve();
+    };
+
+    backdrop.querySelector('.modal-btn-confirm').addEventListener('click', cleanup);
+    backdrop.addEventListener('click', (e) => {
+      if (e.target === backdrop) cleanup();
+    });
+  });
+}
+
+function escapeModalText(text) {
+  if (!text) return '';
+  const d = document.createElement('div');
+  d.textContent = text;
+  return d.innerHTML;
+}

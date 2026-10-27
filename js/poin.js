@@ -4,7 +4,7 @@
 
 import { supabase, isSupabaseConfigured } from './supabaseClient.js';
 import { state } from './app.js';
-import { showToast, launchConfetti, shakeElement } from './fx.js';
+import { showToast, launchConfetti, shakeElement, showConfirmModal } from './fx.js';
 import { updateXpDisplays } from './misi.js';
 
 export const COUPON_ICONS = {
@@ -18,12 +18,17 @@ export const COUPON_ICONS = {
 
 let coupons = [];
 let redemptions = [];
+let couponHandlersInitialized = false;
+let isSubmittingCoupon = false;
 
 /**
  * Inisialisasi modul Poin & Kupon
  */
 export async function initPoin() {
-  setupCouponDomEvents();
+  if (!couponHandlersInitialized) {
+    setupCouponDomEvents();
+    couponHandlersInitialized = true;
+  }
   await loadCouponsData();
   renderCoupons();
   renderGiftStrip();
@@ -123,9 +128,14 @@ export async function handleRedeemCoupon(coupon, btn) {
     return;
   }
 
-  if (!confirm(`Tukar "${coupon.name}" dengan ${coupon.price_xp} XP?`)) {
-    return;
-  }
+  const ok = await showConfirmModal({
+    title: 'Tukar Kupon Hadiah',
+    message: `Tukar "${coupon.name}" dengan ${coupon.price_xp} XP sekarang?`,
+    confirmText: 'Tukar Sekarang',
+    cancelText: 'Nanti Dulu',
+    isDanger: false
+  });
+  if (!ok) return;
 
   btn.disabled = true;
   btn.textContent = 'Menukar…';
@@ -310,6 +320,8 @@ function setupCouponSheetHandlers() {
   if (form) {
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
+      if (isSubmittingCoupon) return;
+
       const name = document.getElementById('couponName').value.trim();
       const price = parseInt(priceInput.value || '100', 10);
       const iconKey = iconInput.value || 'gift';
@@ -327,32 +339,39 @@ function setupCouponSheetHandlers() {
       const btnSave = document.getElementById('btnSaveCoupon');
       btnSave.disabled = true;
       btnSave.textContent = 'Menyimpan…';
+      isSubmittingCoupon = true;
 
-      const { error } = await supabase
-        .from('coupons')
-        .insert({
-          couple_id: state.profile.couple_id,
-          name,
-          price_xp: price,
-          icon_key: iconKey,
-          is_active: true,
-          created_by: state.profile.id
-        });
+      try {
+        const { error } = await supabase
+          .from('coupons')
+          .insert({
+            couple_id: state.profile.couple_id,
+            name,
+            price_xp: price,
+            icon_key: iconKey,
+            is_active: true,
+            created_by: state.profile.id
+          });
 
-      btnSave.disabled = false;
-      btnSave.textContent = 'Bikin Kupon';
+        if (error) {
+          console.error('Error create coupon:', error);
+          showToast('Gagal membuat kupon');
+          return;
+        }
 
-      if (error) {
-        console.error('Error create coupon:', error);
-        showToast('Gagal membuat kupon');
-        return;
+        showToast('Kupon hadiah baru berhasil dibuat!');
+        closeCouponSheet();
+        await loadCouponsData();
+        renderCoupons();
+        renderGiftStrip();
+      } catch (ex) {
+        console.error('Exception bikin kupon:', ex);
+        showToast('Terjadi kesalahan saat membuat kupon');
+      } finally {
+        isSubmittingCoupon = false;
+        btnSave.disabled = false;
+        btnSave.textContent = 'Bikin Kupon';
       }
-
-      showToast('Kupon hadiah baru berhasil dibuat!');
-      closeCouponSheet();
-      await loadCouponsData();
-      renderCoupons();
-      renderGiftStrip();
     });
   }
 }

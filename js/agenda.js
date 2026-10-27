@@ -4,7 +4,7 @@
 
 import { supabase, isSupabaseConfigured } from './supabaseClient.js';
 import { state } from './app.js';
-import { showToast } from './fx.js';
+import { showToast, showConfirmModal } from './fx.js';
 
 export const MONTHS = [
   'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
@@ -597,7 +597,15 @@ function setupSheetHandlers() {
     btnDelete.addEventListener('click', async () => {
       const id = document.getElementById('agendaId').value;
       if (!id) return;
-      if (!confirm('Hapus agenda ini?')) return;
+
+      const ok = await showConfirmModal({
+        title: 'Hapus Agenda',
+        message: 'Yakin ingin menghapus agenda kegiatan ini?',
+        confirmText: 'Hapus',
+        cancelText: 'Batal',
+        isDanger: true
+      });
+      if (!ok) return;
 
       btnDelete.disabled = true;
       btnDelete.textContent = 'Menghapus…';
@@ -717,7 +725,14 @@ function renderCategoryList() {
         return;
       }
 
-      if (!confirm(`Hapus kategori "${cat.name}"?`)) return;
+      const ok = await showConfirmModal({
+        title: 'Hapus Kategori',
+        message: `Yakin ingin menghapus kategori "${cat.name}"?`,
+        confirmText: 'Hapus',
+        cancelText: 'Batal',
+        isDanger: true
+      });
+      if (!ok) return;
 
       customCategories = customCategories.filter(c => c.key !== key);
 

@@ -4,7 +4,7 @@
 
 import { supabase, isSupabaseConfigured } from './supabaseClient.js';
 import { state } from './app.js';
-import { showToast, launchConfetti, hopElement } from './fx.js';
+import { showToast, launchConfetti, hopElement, showConfirmModal } from './fx.js';
 import { formatDateKey } from './agenda.js';
 import { loadStreakData, loadWeeklyLeaderboard } from './streak.js';
 
@@ -533,7 +533,15 @@ function setupMissionSheetHandlers() {
     btnDelete.addEventListener('click', async () => {
       const id = document.getElementById('missionId').value;
       if (!id) return;
-      if (!confirm('Hapus misi ini?')) return;
+
+      const ok = await showConfirmModal({
+        title: 'Hapus Misi',
+        message: 'Yakin ingin menghapus misi ini dari daftar bersama?',
+        confirmText: 'Hapus',
+        cancelText: 'Batal',
+        isDanger: true
+      });
+      if (!ok) return;
 
       btnDelete.disabled = true;
       btnDelete.textContent = 'Menghapus…';

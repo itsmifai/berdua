@@ -3,7 +3,7 @@
 // ==============================================================================
 
 import { requireAuth, getCurrentProfile, logout } from './auth.js';
-import { showToast } from './fx.js';
+import { showToast, showConfirmModal } from './fx.js';
 import { supabase, isSupabaseConfigured } from './supabaseClient.js';
 import { initAgenda, loadAgendaEvents, renderCalendar, renderDayList, renderUpcomingAgenda, loadCategories, renderCategoryChips } from './agenda.js';
 import { initMisi, loadMissionsData, renderTodayMissions, renderAllMissions } from './misi.js';
@@ -150,7 +150,14 @@ async function init() {
     const btnLogout = document.getElementById('btnLogout');
     if (btnLogout) {
       btnLogout.addEventListener('click', async () => {
-        if (confirm('Yakin ingin keluar dari akun?')) {
+        const ok = await showConfirmModal({
+          title: 'Keluar Akun',
+          message: 'Yakin ingin keluar dari akun Berdua?',
+          confirmText: 'Keluar',
+          cancelText: 'Batal',
+          isDanger: true
+        });
+        if (ok) {
           await logout();
         }
       });
@@ -158,7 +165,6 @@ async function init() {
 
   } catch (err) {
     console.error('Error saat init app:', err);
-    showToast('Gagal memuat aplikasi. Coba refresh halaman.');
   }
 }
 

@@ -194,7 +194,7 @@
 
   <script type="module">
     import { login, sendPasswordReset, redirectIfAuth, getCurrentProfile } from './js/auth.js';
-    import { showToast, shakeElement } from './js/fx.js';
+    import { showToast, shakeElement, showAlertModal } from './js/fx.js';
     import { isSupabaseConfigured } from './js/supabaseClient.js';
 
     // Cek jika sudah login & profil siap, langsung ke index
@@ -237,7 +237,11 @@
         shakeElement(loginCard);
         const uid = data?.user?.id || 'tidak diketahui';
         showToast('Profil akun belum terdaftar di database!');
-        alert(`Login berhasil, tetapi akun ini belum terdaftar di tabel "profiles" database.\n\nUID Anda:\n${uid}\n\nPastikan Anda telah memasukkan UID ini ke dalam supabase/seed.sql lalu menjalankannya di Supabase SQL Editor.`);
+        await showAlertModal({
+          title: 'Ruang Belum Terdaftar',
+          message: `Login berhasil, tetapi akun ini belum terdaftar di tabel "profiles" database.\n\nUID Anda: ${uid}\n\nPastikan Anda telah memasukkan UID ini ke dalam supabase/seed.sql lalu menjalankannya di Supabase SQL Editor.`,
+          okText: 'Saya Mengerti'
+        });
         return;
       }
 
