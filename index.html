@@ -548,6 +548,21 @@
 
 </div>
 
+<script>
+  // Fallback splash dismisser: memastikan splash selalu hilang setelah 2.6s atau bila diketuk
+  const splashEl = document.getElementById("splash");
+  let splashDone = false;
+  function dismissSplash() {
+    if (splashDone || !splashEl) return;
+    splashDone = true;
+    splashEl.classList.add("hide");
+    setTimeout(() => { if (splashEl) splashEl.style.display = "none"; }, 500);
+  }
+  if (splashEl) {
+    setTimeout(dismissSplash, 2600);
+    splashEl.addEventListener("click", dismissSplash);
+  }
+</script>
 <script type="module" src="js/app.js"></script>
 </body>
 </html>

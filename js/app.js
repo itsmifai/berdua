@@ -145,7 +145,7 @@ async function init() {
   }
 }
 
-function renderUserHeader(profile) {
+export function renderUserHeader(profile) {
   const profileNameEl = document.getElementById('profileDisplayName');
   if (profileNameEl) profileNameEl.textContent = profile.display_name;
 
