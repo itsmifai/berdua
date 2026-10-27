@@ -8,6 +8,8 @@ import { isSupabaseConfigured } from './supabaseClient.js';
 import { initAgenda } from './agenda.js';
 import { initMisi } from './misi.js';
 import { initStreak } from './streak.js';
+import { initPoin } from './poin.js';
+import { initProfil } from './profil.js';
 
 // State Global Aplikasi
 export const state = {
@@ -111,7 +113,13 @@ async function init() {
   // 6. Inisialisasi Fitur Streak & Leaderboard (Fase 4)
   await initStreak();
 
-  // 7. Global Backdrop Sheet Close Handler
+  // 7. Inisialisasi Fitur Kupon & Poin (Fase 5)
+  await initPoin();
+
+  // 8. Inisialisasi Fitur Profil & Statistik (Fase 5)
+  await initProfil();
+
+  // 9. Global Backdrop Sheet Close Handler
   const backdrop = document.getElementById('sheetBackdrop');
   if (backdrop) {
     backdrop.addEventListener('click', () => {

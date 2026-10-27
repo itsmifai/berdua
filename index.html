@@ -503,6 +503,45 @@
     </form>
   </div>
 
+  <!-- Bottom Sheet: Bikin Kupon -->
+  <div class="bottom-sheet" id="sheetCoupon">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title" id="sheetCouponTitle">Bikin Kupon Hadiah</div>
+    <form id="formCoupon">
+      <input type="hidden" id="couponIconKey" value="gift">
+
+      <div class="form-group">
+        <label class="form-label" for="couponName">Nama Kupon</label>
+        <input type="text" id="couponName" class="form-input" placeholder="misal: Dipijitin 10 menit / Bebas tugas rumah" maxlength="50" required>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Harga XP</label>
+        <div class="chips-row" id="couponPriceChips" style="margin-bottom:8px;">
+          <button type="button" class="chip-btn" data-price="50">50 XP</button>
+          <button type="button" class="chip-btn selected" data-price="100">100 XP</button>
+          <button type="button" class="chip-btn" data-price="150">150 XP</button>
+          <button type="button" class="chip-btn" data-price="200">200 XP</button>
+        </div>
+        <input type="number" id="couponPrice" class="form-input" min="10" max="5000" value="100" placeholder="Atau ketik harga XP bebas" required>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Ikon Kupon</label>
+        <div class="chips-row" id="couponIconChips">
+          <button type="button" class="chip-btn selected" data-icon="gift">Kado</button>
+          <button type="button" class="chip-btn" data-icon="food">Makanan</button>
+          <button type="button" class="chip-btn" data-icon="heart">Cinta</button>
+          <button type="button" class="chip-btn" data-icon="briefcase">Tugas</button>
+          <button type="button" class="chip-btn" data-icon="movie">Nonton</button>
+          <button type="button" class="chip-btn" data-icon="custom">Bintang</button>
+        </div>
+      </div>
+
+      <button type="submit" class="btn-primary" id="btnSaveCoupon">Bikin Kupon</button>
+    </form>
+  </div>
+
 </div>
 
 <script type="module" src="js/app.js"></script>
